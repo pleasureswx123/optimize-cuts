@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 背景圆 -->
+  <circle cx="100" cy="100" r="90" fill="#3498db" opacity="0.1"/>
+  
+  <!-- 剪刀图标 -->
+  <path d="M140 70L90 100L140 130M60 70L110 100L60 130" 
+        stroke="#3498db" 
+        stroke-width="8" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+  
+  <!-- 切割线 -->
+  <line x1="30" y1="100" x2="170" y2="100" 
+        stroke="#2c3e50" 
+        stroke-width="4" 
+        stroke-dasharray="8 4"/>
+  
+  <!-- 装饰点 -->
+  <circle cx="90" cy="100" r="4" fill="#2c3e50"/>
+  <circle cx="110" cy="100" r="4" fill="#2c3e50"/>
+</svg> 

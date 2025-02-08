@@ -7,6 +7,7 @@ function createWindow() {
     width: 1200,
     height: 800,
     show: false,
+    backgroundColor: '#f8fafb', // 添加背景色，防止白屏
     webPreferences: {
       nodeIntegration: false, // 禁用 nodeIntegration
       contextIsolation: true, // 启用上下文隔离
@@ -67,20 +68,16 @@ function createWindow() {
   const menu = Menu.buildFromTemplate(template)
   Menu.setApplicationMenu(menu)
 
-  // 根据开发环境或生产环境加载不同的URL
-  if (isDev) {
-    // 确保开发服务器启动后再加载URL
-    setTimeout(() => {
-      mainWindow.loadURL('http://localhost:5173')
-      mainWindow.webContents.openDevTools() // 开发环境下自动打开开发者工具
-    }, 1000)
-  } else {
-    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
-  }
+  // 添加加载状态监听
+  mainWindow.webContents.on('did-start-loading', () => {
+    // 可以在这里添加加载动画
+  })
 
-  // 等待页面加载完成后再显示
   mainWindow.webContents.on('did-finish-load', () => {
-    mainWindow.show()
+    // 确保内容完全加载后再显示窗口
+    setTimeout(() => {
+      mainWindow.show()
+    }, 100)
   })
 
   // 处理加载错误
@@ -100,6 +97,18 @@ function createWindow() {
       event.preventDefault()
     }
   })
+
+  // 修改开发环境加载逻辑
+  if (isDev) {
+    mainWindow.loadURL('http://localhost:5173').catch(() => {
+      // 如果加载失败，等待一段时间后重试
+      setTimeout(() => {
+        mainWindow.loadURL('http://localhost:5173')
+      }, 1000)
+    })
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '../dist/index.html'))
+  }
 
   return mainWindow
 }

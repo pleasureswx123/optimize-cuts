@@ -1,147 +1,192 @@
 <template>
   <div class="home">
-    <!-- 英雄区域 -->
-    <section class="hero-section">
-      <div class="container text-center">
-        <img src="@/assets/logo.svg" width="300" alt="Company Logo" class="mb-2">
-        <h1 class="tagline">智能切割优化软件系统</h1>
-        <p class="sub-tagline">省时省料·省钱省心，让每一次切割都物尽其用</p>
-        <p class="lead mb-4">专业的门窗行业智能工具集，为中小型企业提供精准的切割优化方案</p>
-      </div>
-    </section>
+    <div v-if="loading" class="loading-container">
+      <div class="loading-spinner"></div>
+      <p>加载中...</p>
+    </div>
+    <div v-else>
+      <!-- 英雄区域 -->
+      <section class="hero-section">
+        <div class="container text-center">
+          <img src="@/assets/logo.svg" width="300" alt="Company Logo" class="mb-2">
+          <h1 class="tagline">智能切割优化软件系统</h1>
+          <p class="sub-tagline">省时省料·省钱省心，让每一次切割都物尽其用</p>
+          <p class="lead mb-4">专业的门窗行业智能工具集，为中小型企业提供精准的切割优化方案</p>
+        </div>
+      </section>
 
-    <!-- 工具导航区域 -->
-    <section class="tools-section">
-      <div class="container">
-        <h2 class="text-center mb-5">专业切割优化工具</h2>
-        <div class="row g-4">
-          <!-- 铝钢切割优化工具卡片 -->
-          <div class="col-md-6">
-            <div class="tool-card card h-100">
-              <div class="card-body text-center">
-                <div class="tool-icon">
-                  <i class="fas fa-window-maximize"></i>
+      <!-- 工具导航区域 -->
+      <section class="tools-section">
+        <div class="container">
+          <h2 class="text-center mb-5">专业切割优化工具</h2>
+          <div class="row g-4">
+            <!-- 铝钢切割优化工具卡片 -->
+            <div class="col-md-6">
+              <div class="tool-card card h-100">
+                <div class="card-body text-center">
+                  <div class="tool-icon">
+                    <i class="fas fa-window-maximize"></i>
+                  </div>
+                  <h3 class="card-title">铝钢切割优化软件</h3>
+                  <ul class="tool-features">
+                    <li>智能排版算法，最大化材料利用率</li>
+                    <li>支持多种规格和材质的铝合金型材</li>
+                    <li>自动计算切割角度和尺寸</li>
+                    <li>可导出切割方案和报表</li>
+                  </ul>
+                  <router-link to="/plastic-steel" class="btn btn-primary">
+                    开始使用 <i class="fas fa-arrow-right ms-2"></i>
+                  </router-link>
                 </div>
-                <h3 class="card-title">铝钢切割优化软件</h3>
-                <ul class="tool-features">
-                  <li>智能排版算法，最大化材料利用率</li>
-                  <li>支持多种规格和材质的铝合金型材</li>
-                  <li>自动计算切割角度和尺寸</li>
-                  <li>可导出切割方案和报表</li>
-                </ul>
-                <router-link to="/plastic-steel" class="btn btn-primary">
-                  开始使用 <i class="fas fa-arrow-right ms-2"></i>
-                </router-link>
               </div>
             </div>
-          </div>
 
-          <!-- 玻璃切割优化工具卡片 -->
-          <div class="col-md-6">
-            <div class="tool-card card h-100">
-              <div class="card-body text-center">
-                <div class="tool-icon">
-                  <i class="fas fa-clone"></i>
+            <!-- 玻璃切割优化工具卡片 -->
+            <div class="col-md-6">
+              <div class="tool-card card h-100">
+                <div class="card-body text-center">
+                  <div class="tool-icon">
+                    <i class="fas fa-clone"></i>
+                  </div>
+                  <h3 class="card-title">玻璃切割优化软件</h3>
+                  <ul class="tool-features">
+                    <li>高效的二维排版算法</li>
+                    <li>支持多种玻璃规格和类型</li>
+                    <li>智能避免应力点和危险切割</li>
+                    <li>可视化切割路径和方案</li>
+                  </ul>
+                  <router-link to="/glass" class="btn btn-primary">
+                    开始使用 <i class="fas fa-arrow-right ms-2"></i>
+                  </router-link>
                 </div>
-                <h3 class="card-title">玻璃切割优化软件</h3>
-                <ul class="tool-features">
-                  <li>高效的二维排版算法</li>
-                  <li>支持多种玻璃规格和类型</li>
-                  <li>智能避免应力点和危险切割</li>
-                  <li>可视化切割路径和方案</li>
-                </ul>
-                <router-link to="/glass" class="btn btn-primary">
-                  开始使用 <i class="fas fa-arrow-right ms-2"></i>
-                </router-link>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- 优势展示区域 -->
-    <section class="benefits-section">
-      <div class="container">
-        <h2 class="text-center mb-5">为什么选择我们</h2>
-        <div class="row g-4">
-          <div class="col-md-4">
-            <div class="benefit-item">
-              <div class="benefit-icon">
-                <i class="fas fa-chart-line"></i>
-              </div>
-              <h3>提高效率</h3>
-              <p>智能算法优化切割方案，显著提升材料利用率，减少浪费</p>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="benefit-item">
-              <div class="benefit-icon">
-                <i class="fas fa-coins"></i>
-              </div>
-              <h3>降低成本</h3>
-              <p>通过精确计算和智能排版，最大限度减少材料损耗，节约成本</p>
-            </div>
-          </div>
-          <div class="col-md-4">
-            <div class="benefit-item">
-              <div class="benefit-icon">
-                <i class="fas fa-tools"></i>
-              </div>
-              <h3>易于使用</h3>
-              <p>直观的操作界面，简单的使用流程，快速上手无需专业培训</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- 联系信息区域 -->
-    <section class="contact-section py-5">
-      <div class="container">
-        <div class="business-card-wrapper card p-4">
-          <div class="row align-items-center">
-            <div class="col-md-8">
-              <div class="business-info">
-                <h3 class="company-name">智能切割优化系统</h3>
-                <div class="contact-details">
-                  <p><i class="fas fa-phone"></i> 联系电话：123-456-7890</p>
-                  <p><i class="fas fa-envelope"></i> 电子邮箱：contact@example.com</p>
-                  <p><i class="fas fa-map-marker-alt"></i> 地址：某某省某某市某某区某某街道123号</p>
+      <!-- 优势展示区域 -->
+      <section class="benefits-section">
+        <div class="container">
+          <h2 class="text-center mb-5">为什么选择我们</h2>
+          <div class="row g-4">
+            <div class="col-md-4">
+              <div class="benefit-item">
+                <div class="benefit-icon">
+                  <i class="fas fa-chart-line"></i>
                 </div>
-                <div class="action-buttons mt-4">
-                  <a href="tel:123-456-7890" class="btn btn-primary me-3">
-                    <i class="fas fa-phone me-2"></i>立即咨询
-                  </a>
-                  <a href="mailto:contact@example.com" class="btn btn-outline-primary">
-                    <i class="fas fa-envelope me-2"></i>发送邮件
-                  </a>
-                </div>
+                <h3>提高效率</h3>
+                <p>智能算法优化切割方案，显著提升材料利用率，减少浪费</p>
               </div>
             </div>
-            <div class="col-md-4 text-center">
-              <div class="qr-code">
-                <img src="@/assets/qr-code.png" width="200" alt="联系我们">
+            <div class="col-md-4">
+              <div class="benefit-item">
+                <div class="benefit-icon">
+                  <i class="fas fa-coins"></i>
+                </div>
+                <h3>降低成本</h3>
+                <p>通过精确计算和智能排版，最大限度减少材料损耗，节约成本</p>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="benefit-item">
+                <div class="benefit-icon">
+                  <i class="fas fa-tools"></i>
+                </div>
+                <h3>易于使用</h3>
+                <p>直观的操作界面，简单的使用流程，快速上手无需专业培训</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
+
+      <!-- 联系信息区域 -->
+      <section class="contact-section py-5">
+        <div class="container">
+          <div class="business-card-wrapper card p-4">
+            <div class="row align-items-center">
+              <div class="col-md-8">
+                <div class="business-info">
+                  <h3 class="company-name">智能切割优化系统</h3>
+                  <div class="contact-details">
+                    <p><i class="fas fa-phone"></i> 联系电话：123-456-7890</p>
+                    <p><i class="fas fa-envelope"></i> 电子邮箱：contact@example.com</p>
+                    <p><i class="fas fa-map-marker-alt"></i> 地址：某某省某某市某某区某某街道123号</p>
+                  </div>
+                  <div class="action-buttons mt-4">
+                    <a href="tel:123-456-7890" class="btn btn-primary me-3">
+                      <i class="fas fa-phone me-2"></i>立即咨询
+                    </a>
+                    <a href="mailto:contact@example.com" class="btn btn-outline-primary">
+                      <i class="fas fa-envelope me-2"></i>发送邮件
+                    </a>
+                  </div>
+                </div>
+              </div>
+              <div class="col-md-4 text-center">
+                <div class="qr-code">
+                  <img src="@/assets/qr-code.png" width="200" alt="联系我们">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
   </div>
 </template>
 
 <script setup>
-// 组件逻辑
+import { ref, onMounted } from 'vue'
+
+const loading = ref(true)
+
+onMounted(() => {
+  // 模拟内容加载
+  setTimeout(() => {
+    loading.value = false
+  }, 500)
+})
 </script>
 
 <style scoped>
+.home {
+  min-height: calc(100vh - 60px); /* 减去头部导航的高度 */
+  display: flex;
+  flex-direction: column;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 60px);
+  background: var(--light-bg);
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid rgba(52, 152, 219, 0.1);
+  border-radius: 50%;
+  border-top-color: var(--secondary-color);
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .hero-section {
   background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
   color: white;
   padding: 8rem 0;
   position: relative;
   overflow: hidden;
+  flex: 0 0 auto;
 }
 
 .hero-section::before {
@@ -188,6 +233,7 @@
   background: var(--light-bg);
   position: relative;
   overflow: hidden;
+  flex: 1 0 auto;
 }
 
 .tools-section::before {
@@ -261,8 +307,11 @@
 }
 
 .contact-section {
+  padding: 8rem 0;
+  background: var(--light-bg);
   position: relative;
-  z-index: 1;
+  overflow: hidden;
+  flex: 0 0 auto;
 }
 
 .business-card-wrapper {

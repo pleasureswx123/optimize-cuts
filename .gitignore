@@ -5,6 +5,7 @@
 /dist
 /build
 /release
+/temp-bak
 
 # Misc
 .DS_Store

@@ -4,6 +4,7 @@
 # Production
 /dist
 /build
+/release
 
 # Misc
 .DS_Store

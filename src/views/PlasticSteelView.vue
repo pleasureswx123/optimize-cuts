@@ -231,32 +231,35 @@
                     <tr>
                       <th>原料编号</th>
                       <th>原料规格</th>
-                      <th>切割序号</th>
-                      <th>长度(mm)</th>
-                      <th>起始位置</th>
+                      <th>切割明细</th>
                       <th>剩余长度</th>
-                      <th>是否余料</th>
+                      <th>利用率</th>
                     </tr>
                   </thead>
                   <tbody>
                     <template v-if="cuttingPlan.length">
-                      <tr v-for="(cut, index) in cuttingPlan" :key="index">
-                        <td>{{ cut.barIndex + 1 }}</td>
-                        <td>{{ cut.originalSpec }}</td>
-                        <td>{{ cut.sequence }}</td>
-                        <td>{{ cut.length }}</td>
-                        <td>{{ cut.position }}</td>
-                        <td>{{ cut.remaining }}</td>
+                      <tr v-for="(plan, index) in cuttingPlan" :key="index">
+                        <td>{{ plan.barIndex }}</td>
+                        <td>{{ plan.originalSpec }}</td>
+                        <td>{{ plan.cutDetails }}</td>
                         <td>
-                          <span v-if="cut.waste > 0" class="text-danger">
-                            是 ({{ (cut.waste/10).toFixed(2) }}cm)
+                          <span :class="{'text-danger': plan.isWaste}">
+                            {{ plan.remainingLength }}mm
                           </span>
-                          <span v-else>否</span>
+                        </td>
+                        <td>
+                          <span class="utilization-badge" :class="{
+                            'bg-success': plan.utilization >= 90,
+                            'bg-warning': plan.utilization < 90 && plan.utilization >= 70,
+                            'bg-danger': plan.utilization < 70
+                          }">
+                            {{ plan.utilization }}%
+                          </span>
                         </td>
                       </tr>
                     </template>
                     <tr v-else>
-                      <td colspan="7" class="text-center">暂无切割方案</td>
+                      <td colspan="5" class="text-center">暂无切割方案</td>
                     </tr>
                   </tbody>
                 </table>
@@ -278,9 +281,9 @@ import * as XLSX from 'xlsx'
 const stockList = ref([
   { length: 6000, price: 100 }  // 默认一个原料规格
 ])
-const sawKerf = ref(3)
+const sawKerf = ref(4)  // 修改默认切割损耗为4mm
 const cutList = ref([
-  { length: 2400, quantity: 2 }  // 移除优先级
+  { length: 2990, quantity: 2 }  // 更新默认切割项以便测试
 ])
 const utilization = ref(0)
 const totalBars = ref(0)
@@ -318,188 +321,190 @@ const removeCutItem = (index) => {
 
 // 计算优化方案
 const calculateOptimization = () => {
-  // 1. 数据预处理
-  const allPieces = []
+  // 1. 数据预处理：按长度分组并记录需求数量
+  const requirements = new Map()
   cutList.value.forEach(item => {
-    for (let i = 0; i < item.quantity; i++) {
-      allPieces.push({
-        length: item.length,
-        originalIndex: cutList.value.indexOf(item)
-      })
-    }
+    const key = item.length
+    requirements.set(key, (requirements.get(key) || 0) + item.quantity)
   })
 
-  // 2. 按长度降序排序
-  allPieces.sort((a, b) => b.length - a.length)
-
-  // 3. 计算需要的原料数量
-  const result = []
-  const remainingPieces = [...allPieces]
-  const availableSpaces = [] // 存储可用的余料空间
-
-  while (remainingPieces.length > 0) {
-    // 首先尝试在现有余料中找到合适的空间
-    let placed = false
-    for (let i = 0; i < remainingPieces.length; i++) {
-      const piece = remainingPieces[i]
-      const spaceIndex = findBestSpace(availableSpaces, piece.length)
+  // 2. 获取所有切割长度并按降序排序
+  const cutLengths = Array.from(requirements.keys()).sort((a, b) => b - a)
+  
+  // 3. 计算单个原料的最优切割方案
+  const findBestPattern = (stockLength, reqs) => {
+    const patterns = []
+    
+    const tryPattern = (remaining, current = [], usedLengths = new Set()) => {
+      // 计算当前方案的总长度（包含切割损耗）
+      const totalLength = current.reduce((sum, cut) => {
+        return sum + cut.length + (current.length > 1 ? sawKerf.value : 0)
+      }, 0)
       
-      if (spaceIndex !== -1) {
-        // 在余料中找到合适的空间
-        const space = availableSpaces[spaceIndex]
-        const stockIndex = space.stockIndex
-        
-        // 添加切割
-        result[stockIndex].cuts.push({
-          length: piece.length,
-          position: space.position,
-          originalIndex: piece.originalIndex
-        })
-        
-        // 更新余料空间
-        const remainingLength = space.length - piece.length - sawKerf.value
-        if (remainingLength >= Math.min(...remainingPieces.slice(1).map(p => p.length))) {
-          availableSpaces[spaceIndex].length = remainingLength
-          availableSpaces[spaceIndex].position = space.position + piece.length + sawKerf.value
-        } else {
-          availableSpaces.splice(spaceIndex, 1)
+      patterns.push({
+        cuts: [...current],
+        remaining: stockLength - totalLength,
+        efficiency: totalLength / stockLength
+      })
+      
+      for (const length of cutLengths) {
+        // 考虑切割损耗进行判断
+        const needSpace = length + (current.length > 0 ? sawKerf.value : 0)
+        if (reqs.get(length) > 0 && needSpace <= remaining) {
+          reqs.set(length, reqs.get(length) - 1)
+          current.push({ length, position: stockLength - remaining })
+          tryPattern(remaining - needSpace, current, new Set([...usedLengths, length]))
+          current.pop()
+          reqs.set(length, reqs.get(length) + 1)
         }
-        
-        remainingPieces.splice(i, 1)
-        placed = true
-        break
       }
     }
-
-    // 如果没有找到合适的余料空间，使用新的原料
-    if (!placed) {
-      const piece = remainingPieces[0]
-      const suitableStock = findBestStock(piece.length, stockList.value)
+    
+    tryPattern(stockLength)
+    return patterns.sort((a, b) => b.efficiency - a.efficiency)[0]
+  }
+  
+  // 4. 生成切割方案
+  const result = []
+  const remainingReqs = new Map(requirements)
+  
+  // 记录已使用的方案效率
+  const usedPatterns = new Map()
+  
+  while (Array.from(remainingReqs.values()).some(qty => qty > 0)) {
+    let bestStock = null
+    let bestPattern = null
+    let maxEfficiency = 0
+    
+    // 为每种规格的原料生成切割方案
+    for (const stock of stockList.value) {
+      const pattern = findBestPattern(stock.length, remainingReqs)
       
-      const newStock = {
-        length: suitableStock.length,
-        price: suitableStock.price,
-        cuts: [{
-          length: piece.length,
-          position: 0,
-          originalIndex: piece.originalIndex
-        }]
+      // 计算方案效率
+      const efficiency = pattern.efficiency
+      
+      // 如果效率更高，更新最佳方案
+      if (efficiency > maxEfficiency) {
+        maxEfficiency = efficiency
+        bestStock = stock
+        bestPattern = pattern
       }
+    }
+    
+    // 如果找到可行方案
+    if (bestPattern) {
+      // 更新剩余需求
+      bestPattern.cuts.forEach(cut => {
+        remainingReqs.set(cut.length, remainingReqs.get(cut.length) - 1)
+      })
       
-      // 添加剩余空间到可用空间列表
-      const remainingLength = suitableStock.length - piece.length - sawKerf.value
-      if (remainingLength >= Math.min(...remainingPieces.slice(1).map(p => p.length))) {
-        availableSpaces.push({
-          stockIndex: result.length,
-          position: piece.length + sawKerf.value,
-          length: remainingLength
-        })
-      }
-      
-      result.push(newStock)
-      remainingPieces.shift()
+      // 添加到结果中
+      result.push({
+        stock: bestStock,
+        cuts: bestPattern.cuts,
+        efficiency: bestPattern.efficiency,
+        waste: bestPattern.remaining
+      })
+    } else {
+      // 如果没有找到可行方案，说明所有需求已满足
+      break
     }
   }
 
-  // 4. 更新统计数据
+  // 5. 更新统计数据
   updateStats(result)
 
-  // 5. 生成切割方案
+  // 6. 生成切割方案
   generateCuttingPlan(result)
 
-  // 6. 更新可视化
+  // 7. 更新可视化
   updateVisualization(result)
-}
-
-// 辅助函数：寻找最合适的原料规格
-const findBestStock = (pieceLength, stocks) => {
-  let bestStock = stocks[0]
-  let minWaste = Infinity
-
-  stocks.forEach(stock => {
-    // 确保原料长度大于切割件长度
-    if (stock.length >= pieceLength) {
-      const waste = stock.length - pieceLength
-      if (waste < minWaste) {
-        minWaste = waste
-        bestStock = stock
-      }
-    }
-  })
-
-  return bestStock
-}
-
-// 辅助函数：在余料空间中找到最合适的位置
-const findBestSpace = (spaces, pieceLength) => {
-  let bestSpaceIndex = -1
-  let minWaste = Infinity
-
-  spaces.forEach((space, index) => {
-    if (space.length >= pieceLength) {
-      const waste = space.length - pieceLength
-      if (waste < minWaste) {
-        minWaste = waste
-        bestSpaceIndex = index
-      }
-    }
-  })
-
-  return bestSpaceIndex
 }
 
 // 更新统计数据
 const updateStats = (result) => {
-  // 重置统计数据
   totalBars.value = result.length
   let totalUsedLength = 0
+  let totalLossLength = 0
   let totalStockLength = 0
   let totalStockCost = 0
   
-  // 创建原料使用统计
   const usageMap = new Map()
   
-  result.forEach(stock => {
+  result.forEach(plan => {
+    const stock = plan.stock
     totalStockLength += stock.length
     totalStockCost += stock.price
-    totalUsedLength += stock.cuts.reduce((sum, cut) => sum + cut.length + sawKerf.value, 0)
     
-    // 统计每种规格的使用情况
-    const specKey = `${stock.length}`
-    if (!usageMap.has(specKey)) {
-      usageMap.set(specKey, {
-        spec: stock.length,
+    // 计算实际使用长度（包括切割损耗）
+    const usedLength = plan.cuts.reduce((sum, cut) => sum + cut.length, 0)
+    const lossLength = (plan.cuts.length - 1) * sawKerf.value
+    
+    totalUsedLength += usedLength
+    totalLossLength += lossLength
+    
+    // 更新使用统计
+    const key = stock.length
+    if (!usageMap.has(key)) {
+      usageMap.set(key, {
+        spec: key,
         price: stock.price,
         quantity: 1,
         total: stock.price
       })
     } else {
-      const stat = usageMap.get(specKey)
+      const stat = usageMap.get(key)
       stat.quantity++
       stat.total = stat.quantity * stat.price
     }
   })
   
-  // 更新统计数据
-  utilization.value = Math.round((totalUsedLength / totalStockLength) * 100)
-  wasteLength.value = totalStockLength - totalUsedLength
+  // 更新统计数据 - 修改利用率计算
+  const totalUsed = totalUsedLength + totalLossLength // 总使用长度（包含切割损耗）
+  utilization.value = Number(((totalUsed / totalStockLength) * 100).toFixed(2))
+  wasteLength.value = totalStockLength - totalUsed // 总废料长度 = 总长度 - 使用长度（包含切割损耗）
   totalCost.value = totalStockCost
   materialUsageStats.value = Array.from(usageMap.values())
 }
 
 // 生成切割方案
 const generateCuttingPlan = (result) => {
-  cuttingPlan.value = result.flatMap((stock, stockIndex) => 
-    stock.cuts.map((cut, cutIndex) => ({
-      barIndex: stockIndex,
-      sequence: cutIndex + 1,
-      length: cut.length,
-      position: cut.position,
-      remaining: stock.length - cut.length - sawKerf.value,
-      originalSpec: `${stock.length}mm`,
-      waste: cut.length + sawKerf.value - stock.length
-    }))
-  )
+  // 按原料规格分组整理切割方案
+  const groupedPlan = result.map((stock, stockIndex) => {
+    // 统计每种长度的数量
+    const lengthCounts = new Map()
+    stock.cuts.forEach(cut => {
+      const key = cut.length
+      lengthCounts.set(key, (lengthCounts.get(key) || 0) + 1)
+    })
+    
+    // 计算当前原料的利用率 - 修改计算逻辑
+    const totalCutLength = stock.cuts.reduce((sum, cut) => sum + cut.length, 0) // 实际切割长度
+    const totalLoss = (stock.cuts.length - 1) * sawKerf.value // 切割损耗总长度
+    const totalUsed = totalCutLength + totalLoss // 总使用长度（包含切割损耗）
+    const utilization = Number(((totalUsed / stock.stock.length) * 100).toFixed(2)) // 计算利用率，保留两位小数
+    
+    // 计算实际剩余长度
+    const remainingLength = stock.stock.length - totalUsed
+    
+    // 转换为显示格式
+    const cutDetails = Array.from(lengthCounts.entries())
+      .sort((a, b) => b[0] - a[0]) // 按长度降序排序
+      .map(([length, count]) => `${length}mm×${count}`)
+      .join('，')
+    
+    return {
+      barIndex: stockIndex + 1,
+      originalSpec: `${stock.stock.length}mm`,
+      cutDetails: cutDetails,
+      remainingLength: remainingLength,
+      isWaste: remainingLength > 0,
+      utilization: utilization,
+      sawKerfLoss: totalLoss
+    }
+  })
+  
+  cuttingPlan.value = groupedPlan
 }
 
 // 更新可视化
@@ -509,7 +514,7 @@ const updateVisualization = (result) => {
   // 清除现有内容
   d3.select(visualizationContainer.value).selectAll('*').remove()
 
-  const margin = { top: 20, right: 20, bottom: 20, left: 60 }
+  const margin = { top: 20, right: 120, bottom: 20, left: 100 }
   const width = visualizationContainer.value.clientWidth - margin.left - margin.right
   const barHeight = 40
   const height = (result.length * barHeight * 1.5) + margin.top + margin.bottom
@@ -524,11 +529,22 @@ const updateVisualization = (result) => {
 
   // 创建比例尺
   const xScale = d3.scaleLinear()
-    .domain([0, d3.max(result, d => d.length)])
+    .domain([0, d3.max(result, d => d.stock.length)])
     .range([0, width])
 
-  // 创建颜色比例尺
-  const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
+  // 获取所有不同的切割长度
+  const uniqueLengths = new Set()
+  result.forEach(plan => {
+    plan.cuts.forEach(cut => {
+      uniqueLengths.add(cut.length)
+    })
+  })
+  
+  // 创建颜色映射
+  const colorMap = new Map()
+  Array.from(uniqueLengths).sort((a, b) => b - a).forEach((length, index) => {
+    colorMap.set(length, d3.schemeCategory10[index % 10])
+  })
 
   // 绘制每个原料条
   const bars = svg.selectAll('.bar-group')
@@ -543,67 +559,147 @@ const updateVisualization = (result) => {
     .attr('class', 'stock-bar')
     .attr('x', 0)
     .attr('y', 0)
-    .attr('width', d => xScale(d.length))
+    .attr('width', d => xScale(d.stock.length))
     .attr('height', barHeight)
-    .attr('fill', '#f8f9fa')
-    .attr('stroke', '#dee2e6')
+    .attr('fill', '#e9ecef')  // 更深的背景色
+    .attr('stroke', '#ced4da')
+    .attr('stroke-width', 1.5)  // 更粗的边框
 
   // 绘制切割段
-  bars.each(function(stock, stockIndex) {
+  bars.each(function(plan) {
     const bar = d3.select(this)
     let accumPosition = 0
 
     // 绘制切割段
-    stock.cuts.forEach((cut, cutIndex) => {
+    plan.cuts.forEach(cut => {
+      const cutWidth = xScale(cut.length)
+      const cutX = xScale(accumPosition)
+      
+      if (isNaN(cutWidth) || isNaN(cutX)) return
+
       // 切割段矩形
       bar.append('rect')
-        .attr('x', xScale(accumPosition))
+        .attr('x', cutX)
         .attr('y', 0)
-        .attr('width', xScale(cut.length))
+        .attr('width', cutWidth)
         .attr('height', barHeight)
-        .attr('fill', colorScale(cut.originalIndex))
+        .attr('fill', colorMap.get(cut.length))
         .attr('stroke', 'white')
 
       // 切割段标签
-      bar.append('text')
-        .attr('x', xScale(accumPosition + cut.length/2))
-        .attr('y', barHeight/2)
-        .attr('dy', '0.35em')
-        .attr('text-anchor', 'middle')
-        .attr('fill', 'white')
-        .text(cut.length)
+      if (cutWidth > 40) {
+        bar.append('text')
+          .attr('x', cutX + cutWidth/2)
+          .attr('y', barHeight/2)
+          .attr('dy', '0.35em')
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'white')
+          .attr('class', 'cut-label')
+          .text(cut.length)
+      }
 
       accumPosition += cut.length + sawKerf.value
     })
 
     // 显示余料
-    if (stock.length - stock.cuts.reduce((sum, cut) => sum + cut.length + sawKerf.value, 0) > 0) {
-      bar.append('rect')
-        .attr('x', xScale(accumPosition))
-        .attr('y', 0)
-        .attr('width', xScale(stock.length - stock.cuts.reduce((sum, cut) => sum + cut.length + sawKerf.value, 0)))
-        .attr('height', barHeight)
-        .attr('fill', '#f8f9fa')
-        .attr('stroke', '#dee2e6')
-        .attr('stroke-dasharray', '4,4')
+    const remainingLength = plan.waste
+    if (remainingLength > 0) {
+      const remainingX = xScale(accumPosition)
+      const remainingWidth = xScale(remainingLength)
+      
+      if (!isNaN(remainingX) && !isNaN(remainingWidth)) {
+        // 余料矩形
+        bar.append('rect')
+          .attr('x', remainingX)
+          .attr('y', 0)
+          .attr('width', remainingWidth)
+          .attr('height', barHeight)
+          .attr('fill', '#f8f9fa')
+          .attr('stroke', '#dee2e6')
+          .attr('stroke-dasharray', '4,4')
 
-      bar.append('text')
-        .attr('x', xScale(accumPosition + (stock.length - stock.cuts.reduce((sum, cut) => sum + cut.length + sawKerf.value, 0))/2))
-        .attr('y', barHeight/2)
-        .attr('dy', '0.35em')
-        .attr('text-anchor', 'middle')
-        .attr('fill', '#666')
-        .text(`余料: ${stock.length - stock.cuts.reduce((sum, cut) => sum + cut.length + sawKerf.value, 0)}`)
+        // 余料文本背景
+        const remainingText = `余料: ${remainingLength}mm`
+        bar.append('rect')
+          .attr('x', xScale(plan.stock.length) + 10)
+          .attr('y', 0)
+          .attr('width', 100)
+          .attr('height', barHeight)
+          .attr('fill', '#f8f9fa')
+          .attr('rx', 4)
+          .attr('ry', 4)
+
+        // 余料文本
+        bar.append('text')
+          .attr('x', xScale(plan.stock.length) + 60)
+          .attr('y', barHeight/2)
+          .attr('dy', '0.35em')
+          .attr('text-anchor', 'middle')
+          .attr('fill', '#666')
+          .attr('class', 'remaining-label')
+          .text(remainingText)
+      }
     }
-
-    // 添加原料编号
-    bar.append('text')
-      .attr('x', -10)
-      .attr('y', barHeight/2)
-      .attr('dy', '0.35em')
-      .attr('text-anchor', 'end')
-      .text(`原料 ${stockIndex + 1}`)
   })
+
+  // 添加原料编号和规格
+  bars.append('g')
+    .attr('class', 'spec-label')
+    .attr('transform', d => `translate(-10, 0)`)
+    .append('rect')
+    .attr('x', -80)
+    .attr('y', 5)
+    .attr('width', 80)
+    .attr('height', 30)
+    .attr('fill', '#f8f9fa')
+    .attr('stroke', '#dee2e6')
+    .attr('rx', 4)
+
+  bars.select('.spec-label')
+    .append('text')
+    .attr('x', -40)
+    .attr('y', barHeight/2)
+    .attr('dy', '0.35em')
+    .attr('text-anchor', 'middle')
+    .attr('fill', '#333')
+    .attr('font-size', '12px')
+    .text((d, i) => `${d.stock.length}mm`)
+
+  // 添加图例
+  const legend = svg.append('g')
+    .attr('class', 'legend')
+    .attr('transform', `translate(${width + 20}, 0)`)
+    .append('rect')
+    .attr('width', 100)
+    .attr('height', uniqueLengths.size * 25 + 10)
+    .attr('fill', '#f8f9fa')
+    .attr('stroke', '#dee2e6')
+    .attr('rx', 4)
+    .attr('ry', 4)
+
+  const legendGroup = svg.select('.legend')
+    .append('g')
+    .attr('transform', 'translate(10, 10)')
+
+  const legendItems = legendGroup.selectAll('.legend-item')
+    .data(Array.from(colorMap.entries()))
+    .enter()
+    .append('g')
+    .attr('class', 'legend-item')
+    .attr('transform', (d, i) => `translate(0, ${i * 25})`)
+
+  legendItems.append('rect')
+    .attr('width', 15)
+    .attr('height', 15)
+    .attr('fill', d => d[1])
+    .attr('stroke', 'white')
+
+  legendItems.append('text')
+    .attr('x', 25)
+    .attr('y', 12)
+    .text(d => `${d[0]}mm`)
+    .style('font-size', '12px')
+    .style('font-weight', '500')
 
   // 添加刻度
   const xAxis = d3.axisBottom(xScale)
@@ -614,6 +710,39 @@ const updateVisualization = (result) => {
     .attr('transform', `translate(0,${height - margin.bottom})`)
     .call(xAxis)
 }
+
+// 添加样式
+const style = document.createElement('style')
+style.textContent = `
+  .cut-label {
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .remaining-label {
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .utilization-badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    color: white;
+    font-weight: 500;
+    min-width: 60px;
+    text-align: center;
+  }
+  .bg-success {
+    background-color: #28a745;
+  }
+  .bg-warning {
+    background-color: #ffc107;
+    color: #000; /* 黄色背景使用黑色文字更易读 */
+  }
+  .bg-danger {
+    background-color: #dc3545;
+  }
+`
+document.head.appendChild(style)
 
 // 导入导出功能
 const importFromExcel = () => {

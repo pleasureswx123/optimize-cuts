@@ -412,20 +412,52 @@
                   </thead>
                   <tbody>
                     <template v-if="cuttingPlan.length">
-                      <tr v-for="(cut, index) in cuttingPlan" :key="index">
-                        <td>{{ cut.sheetIndex + 1 }}</td>
-                        <td>{{ cut.originalSpec }}</td>
-                        <td>{{ cut.sequence }}</td>
-                        <td>{{ cut.width }}×{{ cut.height }}</td>
-                        <td>({{ cut.x }},{{ cut.y }})</td>
-                        <td>{{ cut.rotated ? '是' : '否' }}</td>
-                        <td>
-                          <span v-if="cut.waste > 0" class="text-danger">
-                            是 ({{ (cut.waste/1000000).toFixed(2) }}m²)
-                          </span>
-                          <span v-else>否</span>
-                        </td>
-                      </tr>
+                      <template v-for="(group, groupIndex) in groupedCuttingPlans" :key="groupIndex">
+                        <!-- 原料规格标题行 -->
+                        <tr class="table-secondary">
+                          <td colspan="7">
+                            <strong>原料规格: {{ group.spec }}</strong>
+                          </td>
+                        </tr>
+                        <!-- 切割件信息 -->
+                        <template v-for="(cut, cutIndex) in group.cuts" :key="cutIndex">
+                          <tr>
+                            <td>{{ cut.sheetIndex + 1 }}</td>
+                            <td>-</td>
+                            <td>{{ cut.sequence }}</td>
+                            <td>{{ cut.width }}×{{ cut.height }}</td>
+                            <td>({{ cut.x }},{{ cut.y }})</td>
+                            <td>{{ cut.rotated ? '是' : '否' }}</td>
+                            <td>
+                              <template v-if="cut.remainingSpaces && cut.remainingSpaces.length > 0">
+                                <div class="waste-info">
+                                  <div class="waste-area">
+                                    <i class="fas fa-square-full text-danger me-1"></i>
+                                    <span>{{ (cut.wasteArea/1000000).toFixed(2) }}m²</span>
+                                  </div>
+                                  <div class="waste-spaces">
+                                    <div class="waste-spaces-header">
+                                      <i class="fas fa-th-large text-muted me-1"></i>
+                                      <span>余料区域:</span>
+                                    </div>
+                                    <div class="waste-spaces-list">
+                                      <div v-for="(space, spaceIndex) in cut.remainingSpaces" :key="spaceIndex" 
+                                           class="waste-space-item">
+                                        <span class="space-size">{{ space.width }}×{{ space.height }}</span>
+                                        <span class="space-position">({{ space.x }},{{ space.y }})</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </template>
+                              <span v-else class="no-waste">
+                                <i class="fas fa-check-circle text-success me-1"></i>
+                                否
+                              </span>
+                            </td>
+                          </tr>
+                        </template>
+                      </template>
                     </template>
                     <tr v-else>
                       <td colspan="7" class="text-center">暂无切割方案</td>
@@ -442,7 +474,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import * as d3 from 'd3'
 import * as XLSX from 'xlsx'
 
@@ -497,241 +529,451 @@ const removeCutItem = (index) => {
 
 // 计算优化方案
 const calculateOptimization = () => {
-  // 1. 数据预处理
-  const allPieces = []
-  cutList.value.forEach(item => {
-    for (let i = 0; i < item.quantity; i++) {
-      allPieces.push({
-        width: item.width,
-        height: item.height,
-        canRotate: item.canRotate,
-        originalIndex: cutList.value.indexOf(item)
-      })
-    }
-  })
-
-  // 2. 根据优化策略排序
-  if (optimizationStrategy.value === 'utilization') {
-    // 按面积降序排序，追求最高利用率
-    allPieces.sort((a, b) => (b.width * b.height) - (a.width * a.height))
-  } else if (optimizationStrategy.value === 'minCuts') {
-    // 按尺寸相似度分组，追求切割图最少
-    allPieces.sort((a, b) => {
-      const aKey = `${a.width}x${a.height}`
-      const bKey = `${b.width}x${b.height}`
-      return aKey.localeCompare(bKey)
-    })
-  } else if (optimizationStrategy.value === 'price') {
-    // 优先使用便宜的原材料
-    stockList.value.sort((a, b) => a.price - b.price)
-  }
-
-  // 3. 处理第一刀切割
-  if (firstCutDirection.value !== 'none') {
-    stockList.value.forEach(stock => {
-      if (firstCutDirection.value === 'vertical') {
-        stock.precut = {
-          width: stock.width / 2,
-          height: stock.height
-        }
-      } else {
-        stock.precut = {
-          width: stock.width,
-          height: stock.height / 2
-        }
-      }
-    })
-  }
-
-  // 4. 应用切割方向约束
-  const result = []
-  const remainingPieces = [...allPieces]
-  const availableSpaces = []
-
-  while (remainingPieces.length > 0) {
-    let placed = false
-    for (let i = 0; i < remainingPieces.length; i++) {
-      const piece = remainingPieces[i]
-      // 考虑布局策略的约束
-      if (layoutStrategy.value === 'vertical') {
-        piece.canRotate = false // 纵向布局时禁止旋转
-      }
-      
-      const { bestSpace, isRotated } = findBestSpace(availableSpaces, piece)
-      
-      if (bestSpace) {
-        // 在余料中找到合适的空间
-        const stockIndex = bestSpace.stockIndex
-        
-        // 添加切割，考虑布局方向
-        result[stockIndex].cuts.push({
-          x: bestSpace.x,
-          y: bestSpace.y,
-          width: isRotated ? piece.height : piece.width,
-          height: isRotated ? piece.width : piece.height,
-          originalIndex: piece.originalIndex,
-          rotated: isRotated,
-          layoutStrategy: layoutStrategy.value
+  try {
+    console.log('开始计算优化方案...')
+    // 1. 数据预处理和排序策略
+    const allPieces = []
+    cutList.value.forEach(item => {
+      for (let i = 0; i < item.quantity; i++) {
+        allPieces.push({
+          width: item.width,
+          height: item.height,
+          canRotate: item.canRotate,
+          originalIndex: cutList.value.indexOf(item),
+          area: item.width * item.height
         })
-        
-        // 更新余料空间
-        updateAvailableSpaces(availableSpaces, bestSpace, piece, isRotated)
-        
-        remainingPieces.splice(i, 1)
-        placed = true
-        break
       }
-    }
+    })
+    console.log('待切割部件列表:', allPieces)
 
-    // 如果没有找到合适的余料空间，使用新的原料
-    if (!placed) {
+    // 按面积降序排序，优先处理大部件
+    allPieces.sort((a, b) => b.area - a.area)
+    console.log('排序后的部件列表:', allPieces)
+
+    // 2. 初始化结果数组和余料列表
+    const result = []
+    const remainingPieces = [...allPieces]
+    const offcuts = [] // 余料列表，每个元素包含 {stockIndex, spaces: [{x, y, width, height}]}
+
+    // 3. 主要优化循环
+    while (remainingPieces.length > 0) {
+      console.log(`当前剩余部件数量: ${remainingPieces.length}`)
       const piece = remainingPieces[0]
-      const suitableStock = findBestStock(piece, stockList.value)
       
-      // 考虑第一刀预切割的影响
-      const stockWidth = firstCutDirection.value !== 'none' ? suitableStock.precut.width : suitableStock.width
-      const stockHeight = firstCutDirection.value !== 'none' ? suitableStock.precut.height : suitableStock.height
+      let placed = false
+      let bestPlacement = { score: -Infinity }
       
-      const newStock = {
-        width: stockWidth,
-        height: stockHeight,
-        price: suitableStock.price,
-        cuts: [{
-          x: 0,
-          y: 0,
-          width: piece.width,
-          height: piece.height,
-          originalIndex: piece.originalIndex,
-          rotated: false,
-          layoutStrategy: layoutStrategy.value
-        }]
+      // 首先尝试在余料中放置
+      for (let i = 0; i < offcuts.length && !placed; i++) {
+        const offcut = offcuts[i]
+        console.log(`尝试在余料 ${i} 中放置，可用空间数量: ${offcut.spaces.length}`)
+        
+        for (const space of offcut.spaces) {
+          // 检查普通方向
+          if (canFitPiece(piece, space)) {
+            const normalPlacement = evaluatePlacement(result[offcut.stockIndex], space, piece, false)
+            console.log(`在余料中不旋转放置评分: ${normalPlacement.score}`)
+            
+            if (normalPlacement.score > bestPlacement.score) {
+              bestPlacement = {
+                ...normalPlacement,
+                stock: result[offcut.stockIndex],
+                space,
+                rotated: false,
+                stockIndex: offcut.stockIndex,
+                isOffcut: true,
+                offcutIndex: i
+              }
+            }
+          }
+          
+          // 检查旋转方向
+          if (piece.canRotate && canFitPieceRotated(piece, space)) {
+            const rotatedPlacement = evaluatePlacement(result[offcut.stockIndex], space, piece, true)
+            console.log(`在余料中旋转放置评分: ${rotatedPlacement.score}`)
+            
+            if (rotatedPlacement.score > bestPlacement.score) {
+              bestPlacement = {
+                ...rotatedPlacement,
+                stock: result[offcut.stockIndex],
+                space,
+                rotated: true,
+                stockIndex: offcut.stockIndex,
+                isOffcut: true,
+                offcutIndex: i
+              }
+            }
+          }
+        }
       }
       
-      // 添加剩余空间到可用空间列表
-      updateAvailableSpaces(availableSpaces, {
-        stockIndex: result.length,
-        x: 0,
-        y: 0,
-        width: stockWidth,
-        height: stockHeight
-      }, piece, false)
-      
-      result.push(newStock)
+      // 如果余料中无法放置，尝试在现有板材的主要区域放置
+      if (bestPlacement.score === -Infinity) {
+        for (let i = 0; i < result.length && !placed; i++) {
+          const stock = result[i]
+          const spaces = findAvailableSpaces(stock)
+          
+          for (const space of spaces) {
+            // 检查普通方向
+            if (canFitPiece(piece, space)) {
+              const normalPlacement = evaluatePlacement(stock, space, piece, false)
+              
+              if (normalPlacement.score > bestPlacement.score) {
+                bestPlacement = {
+                  ...normalPlacement,
+                  stock,
+                  space,
+                  rotated: false,
+                  stockIndex: i,
+                  isOffcut: false
+                }
+              }
+            }
+            
+            // 检查旋转方向
+            if (piece.canRotate && canFitPieceRotated(piece, space)) {
+              const rotatedPlacement = evaluatePlacement(stock, space, piece, true)
+              
+              if (rotatedPlacement.score > bestPlacement.score) {
+                bestPlacement = {
+                  ...rotatedPlacement,
+                  stock,
+                  space,
+                  rotated: true,
+                  stockIndex: i,
+                  isOffcut: false
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 如果找到合适的位置，放置切割件
+      if (bestPlacement.score > -Infinity) {
+        const cut = {
+          x: bestPlacement.space.x,
+          y: bestPlacement.space.y,
+          width: bestPlacement.rotated ? piece.height : piece.width,
+          height: bestPlacement.rotated ? piece.width : piece.height,
+          originalIndex: piece.originalIndex,
+          rotated: bestPlacement.rotated
+        }
+        bestPlacement.stock.cuts.push(cut)
+        placed = true
+        
+        // 更新余料区域
+        if (bestPlacement.isOffcut) {
+          // 从余料列表中移除已使用的空间
+          const offcut = offcuts[bestPlacement.offcutIndex]
+          const spaceIndex = offcut.spaces.indexOf(bestPlacement.space)
+          offcut.spaces.splice(spaceIndex, 1)
+          
+          // 添加新的余料空间
+          const newSpaces = findRemainingSpaces(bestPlacement.space, cut)
+          offcut.spaces.push(...newSpaces)
+          
+          // 如果该余料区域没有可用空间了，从列表中移除
+          if (offcut.spaces.length === 0) {
+            offcuts.splice(bestPlacement.offcutIndex, 1)
+          }
+        } else {
+          // 计算新的余料区域
+          const newOffcuts = {
+            stockIndex: bestPlacement.stockIndex,
+            spaces: findRemainingSpaces(bestPlacement.space, cut)
+          }
+          if (newOffcuts.spaces.length > 0) {
+            offcuts.push(newOffcuts)
+          }
+        }
+        
+        console.log(`放置切割件 - 是否在余料中: ${bestPlacement.isOffcut}, 是否旋转: ${bestPlacement.rotated}, 评分: ${bestPlacement.score}`)
+      }
+
+      // 如果无法放入现有板材和余料，创建新板材
+      if (!placed) {
+        // 检查是否需要旋转原料
+        const normalFit = piece.width <= stockList.value[0].width && piece.height <= stockList.value[0].height
+        const rotatedFit = piece.canRotate && piece.height <= stockList.value[0].width && piece.width <= stockList.value[0].height
+        
+        const shouldRotateStock = !normalFit && rotatedFit
+        const newStock = {
+          width: shouldRotateStock ? stockList.value[0].height : stockList.value[0].width,
+          height: shouldRotateStock ? stockList.value[0].width : stockList.value[0].height,
+          price: stockList.value[0].price,
+          cuts: [{
+            x: 0,
+            y: 0,
+            width: piece.width,
+            height: piece.height,
+            originalIndex: piece.originalIndex,
+            rotated: false
+          }]
+        }
+        result.push(newStock)
+        
+        // 计算新板材的初始余料区域
+        const initialSpace = {
+          x: 0,
+          y: piece.height,
+          width: newStock.width,
+          height: newStock.height - piece.height
+        }
+        if (initialSpace.height >= 10) {
+          offcuts.push({
+            stockIndex: result.length - 1,
+            spaces: [initialSpace]
+          })
+        }
+        
+        const rightSpace = {
+          x: piece.width,
+          y: 0,
+          width: newStock.width - piece.width,
+          height: piece.height
+        }
+        if (rightSpace.width >= 10) {
+          if (offcuts.length > 0 && offcuts[offcuts.length - 1].stockIndex === result.length - 1) {
+            offcuts[offcuts.length - 1].spaces.push(rightSpace)
+          } else {
+            offcuts.push({
+              stockIndex: result.length - 1,
+              spaces: [rightSpace]
+            })
+          }
+        }
+      }
+
       remainingPieces.shift()
     }
+
+    // 4. 更新统计数据
+    updateStats(result)
+    generateCuttingPlan(result)
+    updateVisualization(result)
+  } catch (error) {
+    console.error('计算优化方案出错:', error)
   }
-
-  // 5. 更新统计数据
-  updateStats(result)
-
-  // 6. 生成切割方案
-  generateCuttingPlan(result)
-
-  // 7. 更新可视化
-  updateVisualization(result)
 }
 
-// 辅助函数：寻找最合适的原料规格
-const findBestStock = (piece, stocks) => {
-  let bestStock = stocks[0]
-  let minWaste = Infinity
-
-  stocks.forEach(stock => {
-    // 检查原始方向是否合适
-    if (stock.width >= piece.width && stock.height >= piece.height) {
-      const waste = (stock.width * stock.height) - (piece.width * piece.height)
-      if (waste < minWaste) {
-        minWaste = waste
-        bestStock = stock
-      }
-    }
-
-    // 如果允许旋转，检查旋转后是否更合适
-    if (piece.canRotate && stock.width >= piece.height && stock.height >= piece.width) {
-      const waste = (stock.width * stock.height) - (piece.width * piece.height)
-      if (waste < minWaste) {
-        minWaste = waste
-        bestStock = stock
-      }
-    }
-  })
-
-  return bestStock
-}
-
-// 辅助函数：在余料空间中找到最合适的位置
-const findBestSpace = (spaces, piece) => {
-  let bestSpace = null
-  let minWaste = Infinity
-  let bestRotation = false
-
-  spaces.forEach(space => {
-    // 考虑切割损耗后的实际所需空间
-    const actualWidth = piece.width + cuttingLoss.value
-    const actualHeight = piece.height + cuttingLoss.value
-
-    // 检查原始方向
-    if (space.width >= actualWidth && space.height >= actualHeight) {
-      const waste = (space.width * space.height) - (actualWidth * actualHeight)
-      if (waste < minWaste) {
-        minWaste = waste
-        bestSpace = space
-        bestRotation = false
-      }
-    }
-
-    // 如果允许旋转，检查旋转后的方向
-    if (piece.canRotate && space.width >= actualHeight && space.height >= actualWidth) {
-      const waste = (space.width * space.height) - (actualWidth * actualHeight)
-      if (waste < minWaste) {
-        minWaste = waste
-        bestSpace = space
-        bestRotation = true
-      }
-    }
-  })
-
-  return { bestSpace, isRotated: bestRotation }
-}
-
-// 辅助函数：更新可用空间列表
-const updateAvailableSpaces = (spaces, usedSpace, piece, isRotated) => {
-  // 移除使用的空间
-  const spaceIndex = spaces.indexOf(usedSpace)
-  spaces.splice(spaceIndex, 1)
-
-  const actualWidth = piece.width + cuttingLoss.value
-  const actualHeight = piece.height + cuttingLoss.value
-  const pieceWidth = isRotated ? actualHeight : actualWidth
-  const pieceHeight = isRotated ? actualWidth : actualHeight
-
-  // 添加新的可用空间
-  const rightSpace = {
-    stockIndex: usedSpace.stockIndex,
-    x: usedSpace.x + pieceWidth,
-    y: usedSpace.y,
-    width: usedSpace.width - pieceWidth,
+// 评估放置方案
+const evaluatePlacement = (stock, space, piece, isRotated) => {
+  const pieceWidth = isRotated ? piece.height : piece.width
+  const pieceHeight = isRotated ? piece.width : piece.height
+  
+  // 计算放置后的剩余空间
+  const remainingSpaces = findRemainingSpaces(space, {
+    x: space.x,
+    y: space.y,
+    width: pieceWidth,
     height: pieceHeight
-  }
+  })
+  
+  // 计算评分
+  let score = 0
+  
+  // 1. 考虑剩余空间的可用性 (40%)
+  const usableSpaces = remainingSpaces.filter(s => s.width >= 100 && s.height >= 100)
+  const usableArea = usableSpaces.reduce((sum, s) => sum + s.width * s.height, 0)
+  score += (usableArea / (space.width * space.height)) * 40
+  
+  // 2. 考虑空间的形状 (30%)
+  const aspectRatios = usableSpaces.map(s => Math.min(s.width / s.height, s.height / s.width))
+  const averageAspectRatio = aspectRatios.length > 0 ? 
+    aspectRatios.reduce((sum, ratio) => sum + ratio, 0) / aspectRatios.length : 0
+  score += averageAspectRatio * 30
+  
+  // 3. 考虑剩余空间的数量 (30%)
+  // 更少的剩余空间碎片更好
+  score += (1 - usableSpaces.length / 10) * 30
+  
+  return { score }
+}
 
-  const bottomSpace = {
-    stockIndex: usedSpace.stockIndex,
-    x: usedSpace.x,
-    y: usedSpace.y + pieceHeight,
-    width: usedSpace.width,
-    height: usedSpace.height - pieceHeight
+// 计算放置切割件后的剩余空间
+const findRemainingSpaces = (space, cut) => {
+  const spaces = []
+  
+  // 上方空间
+  if (cut.y > space.y) {
+    spaces.push({
+      x: space.x,
+      y: space.y,
+      width: space.width,
+      height: cut.y - space.y
+    })
   }
+  
+  // 下方空间
+  if (cut.y + cut.height < space.y + space.height) {
+    spaces.push({
+      x: space.x,
+      y: cut.y + cut.height,
+      width: space.width,
+      height: space.y + space.height - (cut.y + cut.height)
+    })
+  }
+  
+  // 左侧空间
+  if (cut.x > space.x) {
+    spaces.push({
+      x: space.x,
+      y: cut.y,
+      width: cut.x - space.x,
+      height: cut.height
+    })
+  }
+  
+  // 右侧空间
+  if (cut.x + cut.width < space.x + space.width) {
+    spaces.push({
+      x: cut.x + cut.width,
+      y: cut.y,
+      width: space.x + space.width - (cut.x + cut.width),
+      height: cut.height
+    })
+  }
+  
+  // 过滤掉太小的空间
+  return spaces.filter(s => s.width >= 10 && s.height >= 10 && s.width * s.height >= 100)
+}
 
-  if (rightSpace.width > 0 && rightSpace.height > 0) {
-    spaces.push(rightSpace)
+// 计算空间浪费
+const calculateWaste = (space, piece) => {
+  const spaceArea = space.width * space.height
+  const pieceArea = piece.width * piece.height
+  return spaceArea - pieceArea
+}
+
+// 检查piece是否能放入space
+const canFitPiece = (piece, space) => {
+  return piece.width <= space.width && piece.height <= space.height
+}
+
+// 检查旋转后的piece是否能放入space
+const canFitPieceRotated = (piece, space) => {
+  return piece.height <= space.width && piece.width <= space.height
+}
+
+// 查找可用空间
+const findAvailableSpaces = (stock) => {
+  console.log('开始查找可用空间...')
+  
+  // 初始化一个大矩形作为可用空间
+  const spaces = [{
+    x: 0,
+    y: 0,
+    width: stock.width,
+    height: stock.height
+  }]
+  
+  // 对于每个已放置的切割件，分割受影响的空间
+  stock.cuts.forEach(cut => {
+    const newSpaces = []
+    spaces.forEach(space => {
+      // 检查当前空间是否与切割件重叠
+      if (isOverlap(space, cut)) {
+        // 将空间分割成最多4个新的矩形空间
+        // 上方空间
+        if (space.y < cut.y) {
+          newSpaces.push({
+            x: space.x,
+            y: space.y,
+            width: space.width,
+            height: cut.y - space.y
+          })
+        }
+        // 下方空间
+        if (space.y + space.height > cut.y + cut.height) {
+          newSpaces.push({
+            x: space.x,
+            y: cut.y + cut.height,
+            width: space.width,
+            height: space.y + space.height - (cut.y + cut.height)
+          })
+        }
+        // 左侧空间
+        if (space.x < cut.x) {
+          newSpaces.push({
+            x: space.x,
+            y: cut.y,
+            width: cut.x - space.x,
+            height: cut.height
+          })
+        }
+        // 右侧空间
+        if (space.x + space.width > cut.x + cut.width) {
+          newSpaces.push({
+            x: cut.x + cut.width,
+            y: cut.y,
+            width: space.x + space.width - (cut.x + cut.width),
+            height: cut.height
+          })
+        }
+      } else {
+        // 如果不重叠，保留原空间
+        newSpaces.push(space)
+      }
+    })
+    
+    // 更新空间列表，移除面积太小的空间
+    spaces.length = 0
+    spaces.push(...newSpaces.filter(space => 
+      space.width >= 10 && space.height >= 10 && space.width * space.height >= 100
+    ))
+  })
+  
+  // 合并相邻的矩形空间
+  return mergeSpaces(spaces)
+}
+
+// 检查两个矩形是否重叠
+const isOverlap = (rect1, rect2) => {
+  return !(rect1.x + rect1.width <= rect2.x ||
+           rect2.x + rect2.width <= rect1.x ||
+           rect1.y + rect1.height <= rect2.y ||
+           rect2.y + rect2.height <= rect1.y)
+}
+
+// 合并相邻的矩形空间
+const mergeSpaces = (spaces) => {
+  let merged = true
+  while (merged) {
+    merged = false
+    for (let i = 0; i < spaces.length; i++) {
+      for (let j = i + 1; j < spaces.length; j++) {
+        const space1 = spaces[i]
+        const space2 = spaces[j]
+        
+        // 检查是否可以水平合并
+        if (space1.y === space2.y && space1.height === space2.height) {
+          if (space1.x + space1.width === space2.x) {
+            space1.width += space2.width
+            spaces.splice(j, 1)
+            merged = true
+            break
+          }
+        }
+        // 检查是否可以垂直合并
+        else if (space1.x === space2.x && space1.width === space2.width) {
+          if (space1.y + space1.height === space2.y) {
+            space1.height += space2.height
+            spaces.splice(j, 1)
+            merged = true
+            break
+          }
+        }
+      }
+      if (merged) break
+    }
   }
-  if (bottomSpace.width > 0 && bottomSpace.height > 0) {
-    spaces.push(bottomSpace)
-  }
+  return spaces
 }
 
 // 更新统计数据
 const updateStats = (result) => {
+  console.log('开始更新统计数据...')
   // 重置统计数据
   let totalUsedArea = 0
   let totalStockArea = 0
@@ -767,97 +1009,204 @@ const updateStats = (result) => {
   wasteArea.value = totalStockArea - totalUsedArea
   totalCost.value = totalStockCost
   materialUsageStats.value = Array.from(usageMap.values())
+  
+  console.log('统计数据更新完成:', {
+    总板材数: totalSheets.value,
+    材料利用率: utilization.value + '%',
+    废料面积: wasteArea.value,
+    总成本: totalCost.value,
+    材料使用统计: materialUsageStats.value
+  })
 }
 
 // 生成切割方案
 const generateCuttingPlan = (result) => {
-  cuttingPlan.value = result.flatMap((stock, stockIndex) => 
-    stock.cuts.map((cut, cutIndex) => ({
-      sheetIndex: stockIndex,
-      sequence: cutIndex + 1,
-      width: cut.width,
-      height: cut.height,
-      x: cut.x,
-      y: cut.y,
-      rotated: cut.rotated,
-      originalSpec: `${stock.width}×${stock.height}`,
-      waste: cutIndex === stock.cuts.length - 1 ? stock.remainingArea : 0
-    }))
-  )
+  console.log('开始生成切割方案...')
+  
+  // 按原料规格分组
+  const groupedPlans = {}
+  result.forEach((stock, stockIndex) => {
+    const specKey = `${stock.width}×${stock.height}`
+    if (!groupedPlans[specKey]) {
+      groupedPlans[specKey] = []
+    }
+    
+    // 获取该板材的余料区域
+    const remainingSpaces = findAvailableSpaces(stock)
+    const totalWasteArea = remainingSpaces.reduce((sum, space) => sum + space.width * space.height, 0)
+    
+    // 添加切割信息和余料信息
+    stock.cuts.forEach((cut, cutIndex) => {
+      groupedPlans[specKey].push({
+        sheetIndex: stockIndex,
+        sequence: cutIndex + 1,
+        width: cut.width,
+        height: cut.height,
+        x: cut.x,
+        y: cut.y,
+        rotated: cut.rotated,
+        originalSpec: specKey,
+        remainingSpaces: cutIndex === stock.cuts.length - 1 ? remainingSpaces : [],
+        wasteArea: cutIndex === stock.cuts.length - 1 ? totalWasteArea : 0
+      })
+    })
+  })
+  
+  // 转换为数组格式
+  cuttingPlan.value = Object.entries(groupedPlans).flatMap(([spec, plans]) => plans)
+  console.log('切割方案生成完成:', cuttingPlan.value)
 }
 
 // 更新可视化
 const updateVisualization = (result) => {
-  if (!visualizationContainer.value) return
+  console.log('开始更新可视化...')
+  if (!visualizationContainer.value) {
+    console.error('可视化容器不存在!')
+    return
+  }
 
   // 清除现有内容
   d3.select(visualizationContainer.value).selectAll('*').remove()
 
   const margin = { top: 20, right: 20, bottom: 20, left: 60 }
   const containerWidth = visualizationContainer.value.clientWidth - margin.left - margin.right
-  const scale = containerWidth / Math.max(...result.map(s => s.width))
-  const height = (result.reduce((sum, stock) => sum + stock.height * scale, 0)) + 
-    (result.length + 1) * margin.top
-
+  console.log('容器宽度:', containerWidth)
+  
+  // 按规格分组
+  const groupedStocks = {}
+  result.forEach((stock, index) => {
+    const key = `${stock.width}×${stock.height}`
+    if (!groupedStocks[key]) {
+      groupedStocks[key] = []
+    }
+    groupedStocks[key].push({ ...stock, originalIndex: index })
+  })
+  
+  // 计算每个规格组的最大数量，用于确定缩放比例
+  const maxStocksInRow = Math.max(...Object.values(groupedStocks).map(group => group.length))
+  const stockWidth = (containerWidth - (maxStocksInRow - 1) * margin.right) / maxStocksInRow
+  const scale = stockWidth / Math.max(...result.map(s => s.width))
+  console.log('缩放比例:', scale)
+  
+  // 计算总高度
+  const totalHeight = Object.keys(groupedStocks).reduce((sum, key) => {
+    const stock = groupedStocks[key][0]
+    return sum + stock.height * scale + margin.top
+  }, 0)
+  
   // 创建SVG
   const svg = d3.select(visualizationContainer.value)
     .append('svg')
     .attr('width', containerWidth + margin.left + margin.right)
-    .attr('height', height)
+    .attr('height', totalHeight + margin.top + margin.bottom)
     .append('g')
     .attr('transform', `translate(${margin.left},${margin.top})`)
 
   // 创建颜色比例尺
   const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
 
-  // 绘制每个原料板
+  // 绘制每组原料板
   let yOffset = 0
-  result.forEach((stock, stockIndex) => {
-    // 绘制原料板背景
-    const stockGroup = svg.append('g')
-      .attr('transform', `translate(0,${yOffset})`)
-
-    stockGroup.append('rect')
-      .attr('class', 'stock-sheet')
-      .attr('x', 0)
-      .attr('y', 0)
-      .attr('width', stock.width * scale)
-      .attr('height', stock.height * scale)
-      .attr('fill', '#f8f9fa')
-      .attr('stroke', '#dee2e6')
-
-    // 绘制切割件
-    stock.cuts.forEach((cut, cutIndex) => {
-      const piece = stockGroup.append('g')
-        .attr('transform', `translate(${cut.x * scale},${cut.y * scale})`)
-
-      // 切割件矩形
-      piece.append('rect')
-        .attr('width', cut.width * scale)
-        .attr('height', cut.height * scale)
-        .attr('fill', colorScale(cut.originalIndex))
-        .attr('stroke', 'white')
-
-      // 尺寸标签
-      piece.append('text')
-        .attr('x', cut.width * scale / 2)
-        .attr('y', cut.height * scale / 2)
-        .attr('dy', '0.35em')
-        .attr('text-anchor', 'middle')
-        .attr('fill', 'white')
-        .text(`${cut.width}×${cut.height}${cut.rotated ? ' (R)' : ''}`)
-    })
-
-    // 添加原料板编号
-    stockGroup.append('text')
+  Object.entries(groupedStocks).forEach(([spec, stocks]) => {
+    const stockHeight = stocks[0].height * scale
+    
+    // 添加规格标签
+    svg.append('text')
       .attr('x', -10)
-      .attr('y', stock.height * scale / 2)
+      .attr('y', yOffset + stockHeight / 2)
       .attr('dy', '0.35em')
       .attr('text-anchor', 'end')
-      .text(`原料 ${stockIndex + 1}`)
+      .attr('font-weight', 'bold')
+      .text(spec)
+    
+    // 绘制同规格的原料板
+    stocks.forEach((stock, groupIndex) => {
+      const stockGroup = svg.append('g')
+        .attr('transform', `translate(${groupIndex * (stockWidth + margin.right)},${yOffset})`)
+      
+      // 绘制原料板背景
+      stockGroup.append('rect')
+        .attr('class', 'stock-sheet')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width', stock.width * scale)
+        .attr('height', stockHeight)
+        .attr('fill', '#f8f9fa')
+        .attr('stroke', '#dee2e6')
 
-    yOffset += stock.height * scale + margin.top
+      // 绘制切割件
+      stock.cuts.forEach((cut, cutIndex) => {
+        const piece = stockGroup.append('g')
+          .attr('transform', `translate(${cut.x * scale},${cut.y * scale})`)
+
+        // 切割件矩形
+        piece.append('rect')
+          .attr('width', cut.width * scale)
+          .attr('height', cut.height * scale)
+          .attr('fill', colorScale(cut.originalIndex))
+          .attr('stroke', 'white')
+
+        // 尺寸标签
+        piece.append('text')
+          .attr('x', cut.width * scale / 2)
+          .attr('y', cut.height * scale / 2)
+          .attr('dy', '0.35em')
+          .attr('text-anchor', 'middle')
+          .attr('fill', 'white')
+          .attr('font-size', '12px')
+          .text(`${cut.width}×${cut.height}${cut.rotated ? ' (R)' : ''}`)
+      })
+
+      // 标记余料区域
+      const usedSpaces = new Set()
+      stock.cuts.forEach(cut => {
+        for (let x = cut.x; x < cut.x + cut.width; x++) {
+          for (let y = cut.y; y < cut.y + cut.height; y++) {
+            usedSpaces.add(`${x},${y}`)
+          }
+        }
+      })
+
+      // 查找连续的余料区域
+      const remainingSpaces = findAvailableSpaces(stock)
+      remainingSpaces.forEach(space => {
+        if (space.width >= 10 && space.height >= 10) {
+          // 绘制余料区域
+          stockGroup.append('rect')
+            .attr('x', space.x * scale)
+            .attr('y', space.y * scale)
+            .attr('width', space.width * scale)
+            .attr('height', space.height * scale)
+            .attr('fill', 'none')
+            .attr('stroke', '#ff6b6b')
+            .attr('stroke-width', 1)
+            .attr('stroke-dasharray', '5,5')
+
+          // 添加余料尺寸标签
+          stockGroup.append('text')
+            .attr('x', (space.x + space.width/2) * scale)
+            .attr('y', (space.y + space.height/2) * scale)
+            .attr('dy', '0.35em')
+            .attr('text-anchor', 'middle')
+            .attr('fill', '#ff6b6b')
+            .attr('font-size', '11px')
+            .text(`${space.width}×${space.height}`)
+        }
+      })
+
+      // 添加原料板编号
+      stockGroup.append('text')
+        .attr('x', stock.width * scale / 2)
+        .attr('y', -5)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '12px')
+        .text(`原料 ${stock.originalIndex + 1}`)
+    })
+    
+    yOffset += stockHeight + margin.top
   })
+  
+  console.log('可视化更新完成')
 }
 
 // 导入导出功能
@@ -922,9 +1271,38 @@ const exportToExcel = () => {
   XLSX.writeFile(workbook, '玻璃切割优化方案.xlsx')
 }
 
+// 添加计算属性
+const groupedCuttingPlans = computed(() => {
+  const groups = {}
+  cuttingPlan.value.forEach(cut => {
+    if (!groups[cut.originalSpec]) {
+      groups[cut.originalSpec] = {
+        spec: cut.originalSpec,
+        cuts: []
+      }
+    }
+    groups[cut.originalSpec].cuts.push(cut)
+  })
+  return Object.values(groups)
+})
+
 // 组件挂载时初始化
 onMounted(() => {
-  calculateOptimization()
+  console.log('组件挂载完成')
+  try {
+    // 确保容器已经渲染
+    nextTick(() => {
+      console.log('visualizationContainer:', visualizationContainer.value)
+      if (cutList.value.length > 0 && stockList.value.length > 0) {
+        console.log('开始初始计算...')
+        calculateOptimization()
+      } else {
+        console.log('无初始数据，跳过计算')
+      }
+    })
+  } catch (error) {
+    console.error('初始化出错:', error)
+  }
 })
 </script>
 
@@ -933,6 +1311,40 @@ onMounted(() => {
   width: 100%;
   overflow-x: auto;
   min-height: 300px;
+  background-color: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cutting-visualization svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+.stock-sheet {
+  fill: #f8f9fa;
+  stroke: #dee2e6;
+  stroke-width: 1px;
+}
+
+.cut-piece {
+  stroke: white;
+  stroke-width: 1px;
+}
+
+.cut-piece text {
+  font-size: 12px;
+  font-family: Arial, sans-serif;
+  pointer-events: none;
+}
+
+.stock-label {
+  font-size: 14px;
+  font-weight: bold;
+  fill: #495057;
 }
 
 .stats-item {
@@ -1206,5 +1618,87 @@ onMounted(() => {
   .parameter-group {
     padding: 0.75rem;
   }
+}
+
+/* 添加新的样式 */
+.table-secondary {
+  background-color: #f8f9fa;
+  border-left: 4px solid #6c757d;
+}
+
+.table td {
+  vertical-align: middle;
+  padding: 0.75rem;
+}
+
+.text-danger {
+  font-size: 0.9rem;
+}
+
+.small {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+/* 余料信息样式 */
+.waste-info {
+  font-size: 0.9rem;
+  padding: 4px 0;
+}
+
+.waste-area {
+  display: flex;
+  align-items: center;
+  color: #dc3545;
+  font-weight: 500;
+  margin-bottom: 6px;
+}
+
+.waste-spaces {
+  border-left: 2px solid #eee;
+  padding-left: 8px;
+  margin-left: 2px;
+}
+
+.waste-spaces-header {
+  display: flex;
+  align-items: center;
+  color: #666;
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.waste-spaces-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 4px;
+}
+
+.waste-space-item {
+  display: flex;
+  align-items: center;
+  font-size: 0.85rem;
+  color: #666;
+  background-color: #f8f9fa;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.space-size {
+  color: #dc3545;
+  font-weight: 500;
+  margin-right: 4px;
+}
+
+.space-position {
+  color: #6c757d;
+  font-size: 0.8rem;
+}
+
+.no-waste {
+  display: flex;
+  align-items: center;
+  color: #198754;
+  font-size: 0.9rem;
 }
 </style> 

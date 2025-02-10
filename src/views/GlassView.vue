@@ -422,13 +422,13 @@
                         <!-- 切割件信息 -->
                         <template v-for="(cut, cutIndex) in group.cuts" :key="cutIndex">
                           <tr>
-                            <td>{{ cut.sheetIndex + 1 }}</td>
+                        <td>{{ cut.sheetIndex + 1 }}</td>
                             <td>-</td>
-                            <td>{{ cut.sequence }}</td>
-                            <td>{{ cut.width }}×{{ cut.height }}</td>
-                            <td>({{ cut.x }},{{ cut.y }})</td>
-                            <td>{{ cut.rotated ? '是' : '否' }}</td>
-                            <td>
+                        <td>{{ cut.sequence }}</td>
+                        <td>{{ cut.width }}×{{ cut.height }}</td>
+                        <td>({{ cut.x }},{{ cut.y }})</td>
+                        <td>{{ cut.rotated ? '是' : '否' }}</td>
+                        <td>
                               <template v-if="cut.remainingSpaces && cut.remainingSpaces.length > 0">
                                 <div class="waste-info">
                                   <div class="waste-area">
@@ -453,9 +453,9 @@
                               <span v-else class="no-waste">
                                 <i class="fas fa-check-circle text-success me-1"></i>
                                 否
-                              </span>
-                            </td>
-                          </tr>
+                          </span>
+                        </td>
+                      </tr>
                         </template>
                       </template>
                     </template>
@@ -532,18 +532,18 @@ const calculateOptimization = () => {
   try {
     console.log('开始计算优化方案...')
     // 1. 数据预处理和排序策略
-    const allPieces = []
-    cutList.value.forEach(item => {
-      for (let i = 0; i < item.quantity; i++) {
-        allPieces.push({
-          width: item.width,
-          height: item.height,
-          canRotate: item.canRotate,
+  const allPieces = []
+  cutList.value.forEach(item => {
+    for (let i = 0; i < item.quantity; i++) {
+      allPieces.push({
+        width: item.width,
+        height: item.height,
+        canRotate: item.canRotate,
           originalIndex: cutList.value.indexOf(item),
           area: item.width * item.height
-        })
-      }
-    })
+      })
+    }
+  })
     console.log('待切割部件列表:', allPieces)
 
     // 按面积降序排序，优先处理大部件
@@ -692,22 +692,22 @@ const calculateOptimization = () => {
       }
 
       // 如果无法放入现有板材和余料，创建新板材
-      if (!placed) {
+    if (!placed) {
         // 检查是否需要旋转原料
         const normalFit = piece.width <= stockList.value[0].width && piece.height <= stockList.value[0].height
         const rotatedFit = piece.canRotate && piece.height <= stockList.value[0].width && piece.width <= stockList.value[0].height
-        
+      
         const shouldRotateStock = !normalFit && rotatedFit
-        const newStock = {
+      const newStock = {
           width: shouldRotateStock ? stockList.value[0].height : stockList.value[0].width,
           height: shouldRotateStock ? stockList.value[0].width : stockList.value[0].height,
           price: stockList.value[0].price,
-          cuts: [{
-            x: 0,
-            y: 0,
-            width: piece.width,
-            height: piece.height,
-            originalIndex: piece.originalIndex,
+        cuts: [{
+          x: 0,
+          y: 0,
+          width: piece.width,
+          height: piece.height,
+          originalIndex: piece.originalIndex,
             rotated: false
           }]
         }
@@ -746,12 +746,12 @@ const calculateOptimization = () => {
       }
 
       remainingPieces.shift()
-    }
+  }
 
     // 4. 更新统计数据
-    updateStats(result)
-    generateCuttingPlan(result)
-    updateVisualization(result)
+  updateStats(result)
+  generateCuttingPlan(result)
+  updateVisualization(result)
   } catch (error) {
     console.error('计算优化方案出错:', error)
   }
@@ -1038,13 +1038,13 @@ const generateCuttingPlan = (result) => {
     // 添加切割信息和余料信息
     stock.cuts.forEach((cut, cutIndex) => {
       groupedPlans[specKey].push({
-        sheetIndex: stockIndex,
-        sequence: cutIndex + 1,
-        width: cut.width,
-        height: cut.height,
-        x: cut.x,
-        y: cut.y,
-        rotated: cut.rotated,
+      sheetIndex: stockIndex,
+      sequence: cutIndex + 1,
+      width: cut.width,
+      height: cut.height,
+      x: cut.x,
+      y: cut.y,
+      rotated: cut.rotated,
         originalSpec: specKey,
         remainingSpaces: cutIndex === stock.cuts.length - 1 ? remainingSpaces : [],
         wasteArea: cutIndex === stock.cuts.length - 1 ? totalWasteArea : 0
@@ -1068,7 +1068,7 @@ const updateVisualization = (result) => {
   // 清除现有内容
   d3.select(visualizationContainer.value).selectAll('*').remove()
 
-  const margin = { top: 20, right: 20, bottom: 20, left: 60 }
+  const margin = { top: 80, right: 120, bottom: 40, left: 80 }
   const containerWidth = visualizationContainer.value.clientWidth - margin.left - margin.right
   console.log('容器宽度:', containerWidth)
   
@@ -1082,18 +1082,20 @@ const updateVisualization = (result) => {
     groupedStocks[key].push({ ...stock, originalIndex: index })
   })
   
-  // 计算每个规格组的最大数量，用于确定缩放比例
-  const maxStocksInRow = Math.max(...Object.values(groupedStocks).map(group => group.length))
-  const stockWidth = (containerWidth - (maxStocksInRow - 1) * margin.right) / maxStocksInRow
+  // 计算每个规格组的最大数量
+  const maxStocksInGroup = Math.max(...Object.values(groupedStocks).map(group => group.length))
+  
+  // 计算单个原料板的宽度和总高度
+  const stockWidth = containerWidth * 0.8  // 留出空间给标注
   const scale = stockWidth / Math.max(...result.map(s => s.width))
-  console.log('缩放比例:', scale)
   
-  // 计算总高度
-  const totalHeight = Object.keys(groupedStocks).reduce((sum, key) => {
-    const stock = groupedStocks[key][0]
-    return sum + stock.height * scale + margin.top
+  // 计算总高度（每组之间留出间距）
+  const groupSpacing = 60  // 组间距
+  const totalHeight = Object.entries(groupedStocks).reduce((sum, [key, stocks]) => {
+    const stockHeight = stocks[0].height * scale
+    return sum + stocks.length * (stockHeight + margin.top) + groupSpacing
   }, 0)
-  
+
   // 创建SVG
   const svg = d3.select(visualizationContainer.value)
     .append('svg')
@@ -1105,25 +1107,55 @@ const updateVisualization = (result) => {
   // 创建颜色比例尺
   const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
 
+  // 创建图例
+  const legend = svg.append('g')
+    .attr('class', 'legend')
+    .attr('transform', `translate(${containerWidth + 20}, 0)`)
+
+  // 获取所有不同的切割件尺寸（考虑旋转）
+  const uniqueCuts = new Set()
+  const dimensionColorMap = new Map()
+  let colorIndex = 0
+
+  result.forEach(stock => {
+    stock.cuts.forEach(cut => {
+      // 创建标准化的尺寸字符串（宽度和高度按照从小到大排序）
+      const normalizedSize = [cut.width, cut.height].sort((a, b) => a - b).join('×')
+      if (!dimensionColorMap.has(normalizedSize)) {
+        dimensionColorMap.set(normalizedSize, colorIndex++)
+      }
+      uniqueCuts.add(normalizedSize)
+    })
+  })
+
+  // 添加图例项
+  Array.from(uniqueCuts).forEach((cutSize) => {
+    const legendItem = legend.append('g')
+      .attr('transform', `translate(0, ${dimensionColorMap.get(cutSize) * 25})`)
+
+    legendItem.append('rect')
+      .attr('width', 15)
+      .attr('height', 15)
+      .attr('fill', colorScale(dimensionColorMap.get(cutSize)))
+
+    legendItem.append('text')
+      .attr('x', 25)
+      .attr('y', 12)
+      .text(cutSize)
+      .attr('font-size', '12px')
+  })
+
   // 绘制每组原料板
   let yOffset = 0
   Object.entries(groupedStocks).forEach(([spec, stocks]) => {
     const stockHeight = stocks[0].height * scale
-    
-    // 添加规格标签
-    svg.append('text')
-      .attr('x', -10)
-      .attr('y', yOffset + stockHeight / 2)
-      .attr('dy', '0.35em')
-      .attr('text-anchor', 'end')
-      .attr('font-weight', 'bold')
-      .text(spec)
+    const [width, height] = spec.split('×').map(Number)
     
     // 绘制同规格的原料板
     stocks.forEach((stock, groupIndex) => {
       const stockGroup = svg.append('g')
-        .attr('transform', `translate(${groupIndex * (stockWidth + margin.right)},${yOffset})`)
-      
+        .attr('transform', `translate(0,${yOffset + groupIndex * (stockHeight + margin.top)})`)
+
       // 绘制原料板背景
       stockGroup.append('rect')
         .attr('class', 'stock-sheet')
@@ -1134,44 +1166,152 @@ const updateVisualization = (result) => {
         .attr('fill', '#f8f9fa')
         .attr('stroke', '#dee2e6')
 
-      // 绘制切割件
-      stock.cuts.forEach((cut, cutIndex) => {
-        const piece = stockGroup.append('g')
-          .attr('transform', `translate(${cut.x * scale},${cut.y * scale})`)
+      // 添加左侧高度标注框
+      stockGroup.append('g')
+        .attr('class', 'height-label')
+        .attr('transform', `translate(-30, ${stockHeight / 2})`)
+        .call(g => {
+          // 背景框
+          g.append('rect')
+            .attr('x', -50)
+            .attr('y', -10)
+            .attr('width', 100)
+            .attr('height', 20)
+            .attr('fill', '#fff')
+            .attr('stroke', '#2196f3')
+            .attr('stroke-width', 1.5)
+            .attr('rx', 4)
+            .attr('ry', 4)
+            .attr('transform', 'rotate(-90)')
 
-        // 切割件矩形
-        piece.append('rect')
-          .attr('width', cut.width * scale)
-          .attr('height', cut.height * scale)
-          .attr('fill', colorScale(cut.originalIndex))
-          .attr('stroke', 'white')
+          // 高度文字
+          g.append('text')
+            .attr('x', 0)
+            .attr('y', 0)
+            .attr('text-anchor', 'middle')
+            .attr('dominant-baseline', 'middle')
+            .attr('font-size', '12px')
+            .attr('font-weight', '500')
+            .attr('fill', '#2196f3')
+            .attr('transform', 'rotate(-90)')
+            .text(`${stock.height}mm`)
 
-        // 尺寸标签
-        piece.append('text')
-          .attr('x', cut.width * scale / 2)
-          .attr('y', cut.height * scale / 2)
-          .attr('dy', '0.35em')
-          .attr('text-anchor', 'middle')
-          .attr('fill', 'white')
-          .attr('font-size', '12px')
-          .text(`${cut.width}×${cut.height}${cut.rotated ? ' (R)' : ''}`)
-      })
+          // 装饰线条
+          g.append('line')
+            .attr('x1', -60)
+            .attr('y1', 0)
+            .attr('x2', -40)
+            .attr('y2', 0)
+            .attr('stroke', '#2196f3')
+            .attr('stroke-width', 1.5)
+            .attr('transform', 'rotate(-90)')
+
+          g.append('line')
+            .attr('x1', 40)
+            .attr('y1', 0)
+            .attr('x2', 60)
+            .attr('y2', 0)
+            .attr('stroke', '#2196f3')
+            .attr('stroke-width', 1.5)
+            .attr('transform', 'rotate(-90)')
+        })
+
+      // 添加原料板编号
+      stockGroup.append('g')
+        .attr('class', 'stock-number')
+        .attr('transform', `translate(${stock.width * scale / 2}, -55)`)
+        .call(g => {
+          // 背景框
+          g.append('rect')
+            .attr('x', -45)
+            .attr('y', -12)
+            .attr('width', 90)
+            .attr('height', 24)
+            .attr('fill', '#f8f9fa')
+            .attr('stroke', '#dee2e6')
+            .attr('rx', 4)
+            .attr('ry', 4)
+          
+          // 编号文本
+          g.append('text')
+            .attr('text-anchor', 'middle')
+            .attr('dy', '0.35em')
+            .attr('font-size', '14px')
+            .attr('font-weight', 'bold')
+            .attr('fill', '#495057')
+            .text(`原料 ${stock.originalIndex + 1}`)
+        })
+
+      // 修改尺寸标注框的位置
+      stockGroup.append('rect')
+        .attr('x', stock.width * scale / 2 - 50)
+        .attr('y', -30)
+        .attr('width', 100)
+        .attr('height', 20)
+        .attr('fill', '#fff')
+        .attr('stroke', '#2196f3')
+        .attr('stroke-width', 1.5)
+        .attr('rx', 4)
+        .attr('ry', 4)
+
+      // 调整尺寸文字位置
+      stockGroup.append('text')
+        .attr('x', stock.width * scale / 2)
+        .attr('y', -18)
+        .attr('text-anchor', 'middle')
+        .attr('font-size', '12px')
+        .attr('font-weight', '500')
+        .attr('fill', '#2196f3')
+        .text(`${stock.width}mm`)
+
+      // 调整装饰线条位置
+      stockGroup.append('line')
+        .attr('x1', stock.width * scale / 2 - 60)
+        .attr('y1', -20)
+        .attr('x2', stock.width * scale / 2 - 40)
+        .attr('y2', -20)
+        .attr('stroke', '#2196f3')
+        .attr('stroke-width', 1.5)
+
+      stockGroup.append('line')
+        .attr('x1', stock.width * scale / 2 + 40)
+        .attr('y1', -20)
+        .attr('x2', stock.width * scale / 2 + 60)
+        .attr('y2', -20)
+        .attr('stroke', '#2196f3')
+        .attr('stroke-width', 1.5)
+
+    // 绘制切割件
+    stock.cuts.forEach((cut, cutIndex) => {
+      const piece = stockGroup.append('g')
+        .attr('transform', `translate(${cut.x * scale},${cut.y * scale})`)
+
+      // 获取标准化的尺寸颜色索引
+      const normalizedSize = [cut.width, cut.height].sort((a, b) => a - b).join('×')
+      const colorIdx = dimensionColorMap.get(normalizedSize)
+
+      // 切割件矩形
+      piece.append('rect')
+        .attr('width', cut.width * scale)
+        .attr('height', cut.height * scale)
+        .attr('fill', colorScale(colorIdx))
+        .attr('stroke', 'white')
+
+      // 尺寸标签
+      piece.append('text')
+        .attr('x', cut.width * scale / 2)
+        .attr('y', cut.height * scale / 2)
+        .attr('dy', '0.35em')
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'white')
+        .attr('font-size', '12px')
+        .text(`${cut.width}×${cut.height}${cut.rotated ? ' (R)' : ''}`)
+    })
 
       // 标记余料区域
-      const usedSpaces = new Set()
-      stock.cuts.forEach(cut => {
-        for (let x = cut.x; x < cut.x + cut.width; x++) {
-          for (let y = cut.y; y < cut.y + cut.height; y++) {
-            usedSpaces.add(`${x},${y}`)
-          }
-        }
-      })
-
-      // 查找连续的余料区域
       const remainingSpaces = findAvailableSpaces(stock)
       remainingSpaces.forEach(space => {
         if (space.width >= 10 && space.height >= 10) {
-          // 绘制余料区域
           stockGroup.append('rect')
             .attr('x', space.x * scale)
             .attr('y', space.y * scale)
@@ -1182,29 +1322,33 @@ const updateVisualization = (result) => {
             .attr('stroke-width', 1)
             .attr('stroke-dasharray', '5,5')
 
-          // 添加余料尺寸标签
-          stockGroup.append('text')
+    stockGroup.append('text')
             .attr('x', (space.x + space.width/2) * scale)
             .attr('y', (space.y + space.height/2) * scale)
-            .attr('dy', '0.35em')
+      .attr('dy', '0.35em')
             .attr('text-anchor', 'middle')
             .attr('fill', '#ff6b6b')
             .attr('font-size', '11px')
             .text(`${space.width}×${space.height}`)
         }
       })
-
-      // 添加原料板编号
-      stockGroup.append('text')
-        .attr('x', stock.width * scale / 2)
-        .attr('y', -5)
-        .attr('text-anchor', 'middle')
-        .attr('font-size', '12px')
-        .text(`原料 ${stock.originalIndex + 1}`)
     })
     
-    yOffset += stockHeight + margin.top
+    yOffset += stocks.length * (stockHeight + margin.top) + groupSpacing
   })
+
+  // 添加箭头标记定义
+  svg.append('defs').append('marker')
+    .attr('id', 'arrow')
+    .attr('viewBox', '0 -5 10 10')
+    .attr('refX', 5)
+    .attr('refY', 0)
+    .attr('markerWidth', 6)
+    .attr('markerHeight', 6)
+    .attr('orient', 'auto')
+    .append('path')
+    .attr('d', 'M0,-5L10,0L0,5')
+    .attr('fill', '#666')
   
   console.log('可视化更新完成')
 }
@@ -1295,7 +1439,7 @@ onMounted(() => {
       console.log('visualizationContainer:', visualizationContainer.value)
       if (cutList.value.length > 0 && stockList.value.length > 0) {
         console.log('开始初始计算...')
-        calculateOptimization()
+  calculateOptimization()
       } else {
         console.log('无初始数据，跳过计算')
       }

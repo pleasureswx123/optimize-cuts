@@ -530,49 +530,67 @@ const removeCutItem = (index) => {
 // 计算优化方案
 const calculateOptimization = () => {
   try {
-    console.log('开始计算优化方案...')
+    console.log('==================== 开始计算优化方案 ====================')
+    console.log('输入参数:')
+    console.log('原料清单:', JSON.stringify(stockList.value, null, 2))
+    console.log('切割清单:', JSON.stringify(cutList.value, null, 2))
+    console.log('切割损耗:', cuttingLoss.value)
+    console.log('优化策略:', optimizationStrategy.value)
+    console.log('排样方案:', layoutStrategy.value)
+    console.log('第一刀方向:', firstCutDirection.value)
+
     // 1. 数据预处理和排序策略
-  const allPieces = []
-  cutList.value.forEach(item => {
-    for (let i = 0; i < item.quantity; i++) {
-      allPieces.push({
-        width: item.width,
-        height: item.height,
-        canRotate: item.canRotate,
+    const allPieces = []
+    cutList.value.forEach(item => {
+      for (let i = 0; i < item.quantity; i++) {
+        allPieces.push({
+          width: item.width,
+          height: item.height,
+          canRotate: item.canRotate,
           originalIndex: cutList.value.indexOf(item),
           area: item.width * item.height
-      })
-    }
-  })
-    console.log('待切割部件列表:', allPieces)
+        })
+      }
+    })
+    console.log('预处理 - 展开所有切割件:', allPieces.length, '个')
 
     // 按面积降序排序，优先处理大部件
     allPieces.sort((a, b) => b.area - a.area)
-    console.log('排序后的部件列表:', allPieces)
+    console.log('排序策略 - 按面积降序排序完成')
+    console.log('最大切割件:', JSON.stringify(allPieces[0]))
+    console.log('最小切割件:', JSON.stringify(allPieces[allPieces.length - 1]))
 
     // 2. 初始化结果数组和余料列表
     const result = []
     const remainingPieces = [...allPieces]
-    const offcuts = [] // 余料列表，每个元素包含 {stockIndex, spaces: [{x, y, width, height}]}
+    const offcuts = [] // 余料列表
+    console.log('初始化 - 开始主循环处理', remainingPieces.length, '个切割件')
 
     // 3. 主要优化循环
+    let iterationCount = 0
     while (remainingPieces.length > 0) {
-      console.log(`当前剩余部件数量: ${remainingPieces.length}`)
+      iterationCount++
+      console.log(`\n-------- 开始第 ${iterationCount} 次迭代 --------`)
+      console.log(`当前剩余切割件数量: ${remainingPieces.length}`)
       const piece = remainingPieces[0]
+      console.log('处理切割件:', JSON.stringify(piece))
       
       let placed = false
       let bestPlacement = { score: -Infinity }
       
       // 首先尝试在余料中放置
+      if (offcuts.length > 0) {
+        console.log(`尝试在 ${offcuts.length} 个余料区域中放置`)
+      }
       for (let i = 0; i < offcuts.length && !placed; i++) {
         const offcut = offcuts[i]
-        console.log(`尝试在余料 ${i} 中放置，可用空间数量: ${offcut.spaces.length}`)
+        console.log(`检查余料区域 ${i + 1}/${offcuts.length}, 包含 ${offcut.spaces.length} 个可用空间`)
         
         for (const space of offcut.spaces) {
           // 检查普通方向
           if (canFitPiece(piece, space)) {
             const normalPlacement = evaluatePlacement(result[offcut.stockIndex], space, piece, false)
-            console.log(`在余料中不旋转放置评分: ${normalPlacement.score}`)
+            console.log(`余料空间 正常放置评分: ${normalPlacement.score}`)
             
             if (normalPlacement.score > bestPlacement.score) {
               bestPlacement = {
@@ -584,13 +602,14 @@ const calculateOptimization = () => {
                 isOffcut: true,
                 offcutIndex: i
               }
+              console.log('更新最佳放置方案 - 余料正常放置')
             }
           }
           
           // 检查旋转方向
           if (piece.canRotate && canFitPieceRotated(piece, space)) {
             const rotatedPlacement = evaluatePlacement(result[offcut.stockIndex], space, piece, true)
-            console.log(`在余料中旋转放置评分: ${rotatedPlacement.score}`)
+            console.log(`余料空间 旋转放置评分: ${rotatedPlacement.score}`)
             
             if (rotatedPlacement.score > bestPlacement.score) {
               bestPlacement = {
@@ -602,6 +621,7 @@ const calculateOptimization = () => {
                 isOffcut: true,
                 offcutIndex: i
               }
+              console.log('更新最佳放置方案 - 余料旋转放置')
             }
           }
         }
@@ -609,14 +629,17 @@ const calculateOptimization = () => {
       
       // 如果余料中无法放置，尝试在现有板材的主要区域放置
       if (bestPlacement.score === -Infinity) {
+        console.log('在余料中未找到合适位置，尝试在现有板材中放置')
         for (let i = 0; i < result.length && !placed; i++) {
           const stock = result[i]
           const spaces = findAvailableSpaces(stock)
+          console.log(`检查板材 ${i + 1}/${result.length}, 发现 ${spaces.length} 个可用空间`)
           
           for (const space of spaces) {
             // 检查普通方向
             if (canFitPiece(piece, space)) {
               const normalPlacement = evaluatePlacement(stock, space, piece, false)
+              console.log(`板材空间 正常放置评分: ${normalPlacement.score}`)
               
               if (normalPlacement.score > bestPlacement.score) {
                 bestPlacement = {
@@ -627,12 +650,14 @@ const calculateOptimization = () => {
                   stockIndex: i,
                   isOffcut: false
                 }
+                console.log('更新最佳放置方案 - 板材正常放置')
               }
             }
             
             // 检查旋转方向
             if (piece.canRotate && canFitPieceRotated(piece, space)) {
               const rotatedPlacement = evaluatePlacement(stock, space, piece, true)
+              console.log(`板材空间 旋转放置评分: ${rotatedPlacement.score}`)
               
               if (rotatedPlacement.score > bestPlacement.score) {
                 bestPlacement = {
@@ -643,6 +668,7 @@ const calculateOptimization = () => {
                   stockIndex: i,
                   isOffcut: false
                 }
+                console.log('更新最佳放置方案 - 板材旋转放置')
               }
             }
           }
@@ -651,6 +677,7 @@ const calculateOptimization = () => {
 
       // 如果找到合适的位置，放置切割件
       if (bestPlacement.score > -Infinity) {
+        console.log('找到最佳放置位置:', JSON.stringify(bestPlacement))
         const cut = {
           x: bestPlacement.space.x,
           y: bestPlacement.space.y,
@@ -664,54 +691,56 @@ const calculateOptimization = () => {
         
         // 更新余料区域
         if (bestPlacement.isOffcut) {
-          // 从余料列表中移除已使用的空间
+          console.log('更新余料区域')
           const offcut = offcuts[bestPlacement.offcutIndex]
           const spaceIndex = offcut.spaces.indexOf(bestPlacement.space)
           offcut.spaces.splice(spaceIndex, 1)
           
-          // 添加新的余料空间
           const newSpaces = findRemainingSpaces(bestPlacement.space, cut)
+          console.log(`生成 ${newSpaces.length} 个新的余料空间`)
           offcut.spaces.push(...newSpaces)
           
-          // 如果该余料区域没有可用空间了，从列表中移除
           if (offcut.spaces.length === 0) {
+            console.log('移除空余料区域')
             offcuts.splice(bestPlacement.offcutIndex, 1)
           }
         } else {
-          // 计算新的余料区域
+          console.log('计算新的余料区域')
           const newOffcuts = {
             stockIndex: bestPlacement.stockIndex,
             spaces: findRemainingSpaces(bestPlacement.space, cut)
           }
           if (newOffcuts.spaces.length > 0) {
+            console.log(`添加 ${newOffcuts.spaces.length} 个新的余料空间`)
             offcuts.push(newOffcuts)
           }
         }
-        
-        console.log(`放置切割件 - 是否在余料中: ${bestPlacement.isOffcut}, 是否旋转: ${bestPlacement.rotated}, 评分: ${bestPlacement.score}`)
       }
 
       // 如果无法放入现有板材和余料，创建新板材
-    if (!placed) {
-        // 检查是否需要旋转原料
+      if (!placed) {
+        console.log('需要创建新板材')
         const normalFit = piece.width <= stockList.value[0].width && piece.height <= stockList.value[0].height
         const rotatedFit = piece.canRotate && piece.height <= stockList.value[0].width && piece.width <= stockList.value[0].height
-      
+        
         const shouldRotateStock = !normalFit && rotatedFit
-      const newStock = {
+        console.log('是否需要旋转原料:', shouldRotateStock)
+        
+        const newStock = {
           width: shouldRotateStock ? stockList.value[0].height : stockList.value[0].width,
           height: shouldRotateStock ? stockList.value[0].width : stockList.value[0].height,
           price: stockList.value[0].price,
-        cuts: [{
-          x: 0,
-          y: 0,
-          width: piece.width,
-          height: piece.height,
-          originalIndex: piece.originalIndex,
+          cuts: [{
+            x: 0,
+            y: 0,
+            width: piece.width,
+            height: piece.height,
+            originalIndex: piece.originalIndex,
             rotated: false
           }]
         }
         result.push(newStock)
+        console.log('创建新板材:', JSON.stringify(newStock))
         
         // 计算新板材的初始余料区域
         const initialSpace = {
@@ -725,6 +754,7 @@ const calculateOptimization = () => {
             stockIndex: result.length - 1,
             spaces: [initialSpace]
           })
+          console.log('添加上方余料空间:', JSON.stringify(initialSpace))
         }
         
         const rightSpace = {
@@ -742,16 +772,25 @@ const calculateOptimization = () => {
               spaces: [rightSpace]
             })
           }
+          console.log('添加右侧余料空间:', JSON.stringify(rightSpace))
         }
       }
 
       remainingPieces.shift()
-  }
+      console.log(`完成第 ${iterationCount} 次迭代，剩余 ${remainingPieces.length} 个切割件`)
+    }
+
+    console.log('\n==================== 优化计算完成 ====================')
+    console.log('使用板材数量:', result.length)
+    console.log('余料区域数量:', offcuts.length)
 
     // 4. 更新统计数据
-  updateStats(result)
-  generateCuttingPlan(result)
-  updateVisualization(result)
+    console.log('\n开始更新统计数据...')
+    updateStats(result)
+    generateCuttingPlan(result)
+    updateVisualization(result)
+    
+    console.log('计算过程完成!')
   } catch (error) {
     console.error('计算优化方案出错:', error)
   }
@@ -759,6 +798,11 @@ const calculateOptimization = () => {
 
 // 评估放置方案
 const evaluatePlacement = (stock, space, piece, isRotated) => {
+  console.log('\n评估放置方案:')
+  console.log('待放置切割件:', JSON.stringify(piece))
+  console.log('目标空间:', JSON.stringify(space))
+  console.log('是否旋转:', isRotated)
+  
   const pieceWidth = isRotated ? piece.height : piece.width
   const pieceHeight = isRotated ? piece.width : piece.height
   
@@ -776,18 +820,24 @@ const evaluatePlacement = (stock, space, piece, isRotated) => {
   // 1. 考虑剩余空间的可用性 (40%)
   const usableSpaces = remainingSpaces.filter(s => s.width >= 100 && s.height >= 100)
   const usableArea = usableSpaces.reduce((sum, s) => sum + s.width * s.height, 0)
-  score += (usableArea / (space.width * space.height)) * 40
+  const spaceScore = (usableArea / (space.width * space.height)) * 40
+  console.log('空间可用性得分:', spaceScore)
+  score += spaceScore
   
   // 2. 考虑空间的形状 (30%)
   const aspectRatios = usableSpaces.map(s => Math.min(s.width / s.height, s.height / s.width))
   const averageAspectRatio = aspectRatios.length > 0 ? 
     aspectRatios.reduce((sum, ratio) => sum + ratio, 0) / aspectRatios.length : 0
-  score += averageAspectRatio * 30
+  const shapeScore = averageAspectRatio * 30
+  console.log('空间形状得分:', shapeScore)
+  score += shapeScore
   
   // 3. 考虑剩余空间的数量 (30%)
-  // 更少的剩余空间碎片更好
-  score += (1 - usableSpaces.length / 10) * 30
+  const fragmentScore = (1 - usableSpaces.length / 10) * 30
+  console.log('空间碎片得分:', fragmentScore)
+  score += fragmentScore
   
+  console.log('总评分:', score)
   return { score }
 }
 

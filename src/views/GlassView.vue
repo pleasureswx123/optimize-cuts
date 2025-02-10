@@ -30,6 +30,14 @@
                           min="0"
                           step="1"
                         >
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary swap-btn"
+                          @click="swapDimensions(stock)"
+                          title="交换宽高"
+                        >
+                          <i class="fas fa-exchange-alt"></i>
+                        </button>
                         <input
                           type="number"
                           class="form-control"
@@ -83,6 +91,14 @@
                           min="0"
                           step="1"
                         >
+                        <button
+                          type="button"
+                          class="btn btn-outline-secondary swap-btn"
+                          @click="swapDimensions(item)"
+                          title="交换宽高"
+                        >
+                          <i class="fas fa-exchange-alt"></i>
+                        </button>
                         <input
                           type="number"
                           class="form-control"
@@ -1512,6 +1528,13 @@ onMounted(() => {
     console.error('初始化出错:', error)
   }
 })
+
+// 在 script setup 部分添加交换函数
+const swapDimensions = (item) => {
+  const temp = item.width
+  item.width = item.height
+  item.height = temp
+}
 </script>
 
 <style scoped>
@@ -1908,5 +1931,41 @@ onMounted(() => {
   align-items: center;
   color: #198754;
   font-size: 0.9rem;
+}
+
+/* 新增样式 */
+.swap-btn {
+  width: 40px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: #f8f9fa;
+  color: #6c757d;
+  transition: all 0.2s ease;
+}
+
+.swap-btn:hover {
+  background: #e9ecef;
+  color: #2c3e50;
+}
+
+.swap-btn i {
+  font-size: 0.9rem;
+}
+
+.stock-item .form-control,
+.cut-item .form-control {
+  border: none;
+  border-radius: 0;
+  padding: 0.75rem;
+  flex: 1;
+  border-right: 1px solid #dee2e6;
+}
+
+.stock-item .form-control:last-child,
+.cut-item .form-control:last-child {
+  border-right: none;
 }
 </style> 

@@ -10,7 +10,7 @@
     <div class="container">
       <div class="row">
         <!-- 输入区域 -->
-        <div class="col-lg-4">
+        <div class="col-lg-4 input-section">
           <div class="card mb-4">
             <div class="card-body">
               <h3 class="card-title mb-4">原料规格</h3>
@@ -841,5 +841,45 @@ onMounted(() => {
 
 .table th {
   white-space: nowrap;
+}
+
+/* 新增固定定位样式 */
+.input-section {
+  /* 默认移动端样式 */
+  position: relative;
+  top: 0;
+  max-height: none;
+  overflow-y: visible;
+  z-index: 1;
+}
+
+/* 桌面端样式 */
+@media (min-width: 992px) {
+  .input-section {
+    position: sticky;
+    top: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    z-index: 100;
+  }
+
+  /* 滚动条样式仅在桌面端生效 */
+  .input-section::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .input-section::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+  }
+
+  .input-section::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+  }
+
+  .input-section::-webkit-scrollbar-thumb:hover {
+    background: #999;
+  }
 }
 </style> 

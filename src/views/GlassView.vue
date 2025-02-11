@@ -349,7 +349,8 @@
                       <div class="d-flex align-items-center justify-content-between w-100">
                         <h4 class="stock-title">
                           <i class="fas fa-layer-group"></i>
-                          <span>板材 {{ groupIndex + 1 }}</span>
+                          <span>板材</span>
+                          <!-- <span>板材 {{ groupIndex + 1 }}</span> -->
                           <span class="stock-dimensions">({{ group.spec }})</span>
                         </h4>
                         <div class="utilization-display" :class="getUtilizationClass(group.utilization)">
@@ -364,7 +365,8 @@
                   <div v-for="(sheet, sheetKey) in group.sheets" :key="sheetKey">
                     <div class="sheet-header cursor-pointer" style="padding: 0 0.75rem; margin-bottom: 0; gap: 0.5rem;"
                       @click="toggleSheetExpansion(sheet.sheetIndex)">
-                      <i class="fas fa-square me-2"></i>#{{ sheet.sheetIndex + 1 }}
+                      <!-- <i class="fas fa-square me-2"></i> -->
+                      #{{ sheet.sheetIndex + 1 }}
 
                       <div class="sheet-progress-wrapper">
                         <div class="sheet-progress">

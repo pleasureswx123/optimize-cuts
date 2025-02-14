@@ -1,16 +1,75 @@
 <template>
   <div class="glass-cutting">
-    <div class="page-subtitle">
+    <div class="hero-section">
+      <div class="hero-overlay"></div>
       <div class="container">
-        <h2>玻璃切割优化</h2>
-        <p>智能优化玻璃切割方案，支持多种规格，最大化材料利用率</p>
+        <div class="hero-content">
+          <h1 class="hero-title">极致省材，智慧切割</h1>
+          <h2 class="hero-subtitle">您的板材智能切割最佳助手</h2>
+          
+          <div class="hero-features">
+            <div class="feature-item">
+              <i class="fas fa-chart-line"></i>
+              <p>降低成本，减少原材料浪费，提高生产效率</p>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-cogs"></i>
+              <p>灵活方案，适应各种生产规模需求</p>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-calculator"></i>
+              <p>精准计算，智能生成最优排版方案</p>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-leaf"></i>
+              <p>极致节省，确保材料利用率最大化</p>
+            </div>
+          </div>
+          
+          <div class="materials-support">
+            <h4>支持多种材质</h4>
+            <div class="materials-grid">
+              <div class="material-item">
+                <i class="fas fa-square"></i>
+                <span>门窗玻璃</span>
+              </div>
+              <div class="material-item">
+                <i class="fas fa-square"></i>
+                <span>家具木板</span>
+              </div>
+              <div class="material-item">
+                <i class="fas fa-square"></i>
+                <span>不锈钢板</span>
+              </div>
+              <div class="material-item">
+                <i class="fas fa-square"></i>
+                <span>石材</span>
+              </div>
+              <div class="material-item">
+                <i class="fas fa-square"></i>
+                <span>铝板</span>
+              </div>
+              <div class="material-item">
+                <i class="fas fa-square"></i>
+                <span>钢板</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-cta">
+            <button class="optimize-btn" @click="scrollToCalculator">
+              <i class="fas fa-calculator"></i>
+              <span>开始优化计算</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="container">
+    <div class="">
       <div class="row">
         <!-- 输入区域 -->
-        <div class="col-lg-4 input-section">
+        <div class="col-lg-3 input-section">
           <div class="card mb-4">
             <div class="card-body">
               <h3 class="card-title mb-4">原料规格</h3>
@@ -109,7 +168,7 @@
         </div>
 
         <!-- 结果展示区域 -->
-        <div class="col-lg-8">
+        <div class="col-lg-9">
           <!-- 优化结果统计 -->
           <div class="card mb-4">
             <div class="card-body">
@@ -244,7 +303,7 @@
                           </div>
                           <div class="cut-details">
                             <div class="position-item">
-                                <i class="fas fa-map-marker-alt"></i>
+                              <i class="fas fa-map-marker-alt"></i>
                               <span>位置: ({{ placement.x }},{{ placement.y }})</span>
                             </div>
                           </div>
@@ -282,7 +341,7 @@
               <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3 class="card-title mb-0">切割方案可视化</h3>
                 <div class="global-legend d-flex align-items-center gap-3" v-if="cuttingPlan.length">
-                  <div v-for="(item, index) in globalLegendItems" :key="index" 
+                  <div v-for="(item, index) in globalLegendItems" :key="index"
                     class="legend-item d-flex align-items-center">
                     <div class="color-block" :style="{ backgroundColor: item.color }"></div>
                     <span class="legend-text">{{ item.size }}</span>
@@ -669,6 +728,14 @@ const exportToImage = () => {
     console.error('导出图片时出错:', error);
   }
 }
+
+// 添加滚动到计算器区域的方法
+const scrollToCalculator = () => {
+  const calculatorElement = document.querySelector('.input-section')
+  if (calculatorElement) {
+    calculatorElement.scrollIntoView({ behavior: 'smooth' })
+  }
+}
 </script>
 
 <style scoped>
@@ -741,7 +808,7 @@ const exportToImage = () => {
   white-space: nowrap;
 }
 
-/* 新增样式 */
+/* 新增的样式 */
 .stock-item,
 .cut-item {
   background-color: white;
@@ -2087,6 +2154,196 @@ const exportToImage = () => {
     margin-top: 0.5rem;
     flex-direction: column;
     gap: 0.5rem;
+  }
+}
+
+/* 新增的英雄区域样式 */
+.hero-section {
+  position: relative;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  padding: 80px 0;
+  color: white;
+  text-align: center;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/pattern.png') repeat;
+  opacity: 0.1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.hero-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(120deg, #ffd700, #fff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+  font-size: 1.8rem;
+  font-weight: 500;
+  margin-bottom: 3rem;
+  opacity: 0.9;
+}
+
+.hero-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin: 3rem auto;
+  max-width: 1200px;
+  padding: 0 1rem;
+}
+
+.feature-item {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  transition: transform 0.3s ease;
+}
+
+.feature-item:hover {
+  transform: translateY(-5px);
+}
+
+.feature-item i {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #ffd700;
+}
+
+.feature-item p {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.materials-support {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 2rem;
+  margin-top: 3rem;
+  backdrop-filter: blur(10px);
+}
+
+.materials-support h4 {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  color: #ffd700;
+}
+
+.materials-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.material-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.material-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+}
+
+.material-item i {
+  color: #ffd700;
+  font-size: 1.2rem;
+}
+
+.material-item span {
+  color: white;
+  font-weight: 500;
+}
+
+.hero-cta {
+  margin-top: 3rem;
+}
+
+.optimize-btn {
+  background: linear-gradient(45deg, #FFD700, #FFA500);
+  border: none;
+  border-radius: 50px;
+  padding: 15px 40px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto;
+  color: #1e3c72;
+}
+
+.optimize-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+  background: linear-gradient(45deg, #FFA500, #FFD700);
+}
+
+.optimize-btn:active {
+  transform: translateY(1px);
+}
+
+.optimize-btn i {
+  font-size: 1.4rem;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 60px 0;
+  }
+  
+  .hero-title {
+    font-size: 2.2rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.4rem;
+  }
+  
+  .hero-features {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .materials-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style> 

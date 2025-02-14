@@ -19,11 +19,11 @@
             </router-link>
             <router-link to="/plastic-steel" class="nav-link" active-class="active">
               <i class="fas fa-window-maximize"></i>
-              门窗切割优化
+              型材切割优化
             </router-link>
             <router-link to="/glass" class="nav-link" active-class="active">
               <i class="fas fa-clone"></i>
-              玻璃切割优化
+              板材切割优化
             </router-link>
           </nav>
         </div>
@@ -56,8 +56,8 @@
             <h3>快速链接</h3>
             <ul>
               <li><router-link to="/">首页</router-link></li>
-              <li><router-link to="/plastic-steel">门窗切割优化</router-link></li>
-              <li><router-link to="/glass">玻璃切割优化</router-link></li>
+              <li><router-link to="/plastic-steel">型材切割优化</router-link></li>
+              <li><router-link to="/glass">板材切割优化</router-link></li>
             </ul>
           </div>
         </div>

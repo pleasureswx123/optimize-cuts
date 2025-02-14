@@ -25,16 +25,16 @@
               <div class="tool-card card h-100">
                 <div class="card-body text-center">
                   <div class="tool-icon">
-                    <i class="fas fa-window-maximize"></i>
+                    <i class="fas fa-ruler-combined"></i>
                   </div>
-                  <h3 class="card-title">铝钢切割优化软件</h3>
+                  <h3 class="card-title">型材切割优化软件</h3>
                   <ul class="tool-features">
-                    <li>智能排版算法，最大化材料利用率</li>
-                    <li>支持多种规格和材质的铝合金型材</li>
-                    <li>自动计算切割角度和尺寸</li>
-                    <li>可导出切割方案和报表</li>
+                    <li><i class="fas fa-check text-success me-2"></i>智能排版算法，最大化材料利用率</li>
+                    <li><i class="fas fa-check text-success me-2"></i>支持多种规格和材质的铝合金型材</li>
+                    <li><i class="fas fa-check text-success me-2"></i>自动计算切割角度和尺寸</li>
+                    <li><i class="fas fa-check text-success me-2"></i>可导出切割方案和报表</li>
                   </ul>
-                  <router-link to="/plastic-steel" class="btn btn-primary">
+                  <router-link to="/plastic-steel" class="btn btn-orange">
                     开始使用 <i class="fas fa-arrow-right ms-2"></i>
                   </router-link>
                 </div>
@@ -46,16 +46,16 @@
               <div class="tool-card card h-100">
                 <div class="card-body text-center">
                   <div class="tool-icon">
-                    <i class="fas fa-clone"></i>
+                    <i class="fas fa-border-all"></i>
                   </div>
-                  <h3 class="card-title">玻璃切割优化软件</h3>
+                  <h3 class="card-title">板材切割优化软件</h3>
                   <ul class="tool-features">
-                    <li>高效的二维排版算法</li>
-                    <li>支持多种玻璃规格和类型</li>
-                    <li>智能避免应力点和危险切割</li>
-                    <li>可视化切割路径和方案</li>
+                    <li><i class="fas fa-check text-success me-2"></i>高效的二维排版算法</li>
+                    <li><i class="fas fa-check text-success me-2"></i>支持多种玻璃规格和类型</li>
+                    <li><i class="fas fa-check text-success me-2"></i>智能避免应力点和危险切割</li>
+                    <li><i class="fas fa-check text-success me-2"></i>可视化切割路径和方案</li>
                   </ul>
-                  <router-link to="/glass" class="btn btn-primary">
+                  <router-link to="/glass" class="btn btn-orange">
                     开始使用 <i class="fas fa-arrow-right ms-2"></i>
                   </router-link>
                 </div>
@@ -398,5 +398,122 @@ onMounted(() => {
   .company-name {
     font-size: 1.8rem;
   }
+}
+
+.btn-orange {
+  background-color: #ff6b00;
+  color: white;
+  border: none;
+  transition: all 0.3s ease;
+}
+
+.btn-orange:hover {
+  background-color: #ff8533;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 107, 0, 0.3);
+}
+
+.tool-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem 0;
+  text-align: center;
+}
+
+.tool-features li {
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  color: #666;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tool-features li i {
+  font-size: 1rem;
+  color: #28a745;
+  flex-shrink: 0;
+}
+
+.tool-icon {
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #0396FF 0%, #0D47A1 100%);
+  box-shadow: 0 10px 20px rgba(3, 150, 255, 0.2);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-icon::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: linear-gradient(45deg, 
+    rgba(255,255,255,0) 0%,
+    rgba(255,255,255,0.1) 50%,
+    rgba(255,255,255,0) 100%);
+  transform: rotate(45deg);
+  animation: shine 3s infinite;
+}
+
+.tool-icon i {
+  font-size: 3.5rem;
+  color: white;
+  transform: translateY(0);
+  transition: all 0.3s ease;
+}
+
+.tool-card:hover .tool-icon {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(3, 150, 255, 0.3);
+}
+
+.tool-card:hover .tool-icon i {
+  transform: scale(1.1);
+}
+
+@keyframes shine {
+  0% {
+    left: -50%;
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    left: 150%;
+    opacity: 0;
+  }
+}
+
+.tool-card {
+  border: none;
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.tool-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+}
+
+.card-title {
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 1.5rem;
 }
 </style> 

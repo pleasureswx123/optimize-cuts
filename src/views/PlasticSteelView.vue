@@ -1,16 +1,86 @@
 <template>
   <div class="plastic-steel-cutting">
-    <div class="page-subtitle">
+    <div class="hero-section">
+      <div class="hero-overlay"></div>
       <div class="container">
-        <h2>门窗材料切割优化</h2>
-        <p>智能优化铝合金型材切割方案，提高材料利用率，降低生产成本</p>
+        <div class="hero-content">
+          <h1 class="hero-title">高效精准，助力生产</h1>
+          <h2 class="hero-subtitle">您的型材切割优化专家！</h2>
+
+          <div class="hero-features">
+            <div class="feature-item">
+              <i class="fas fa-chart-line"></i>
+              <p>提高材料利用率，降低生产成本</p>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-clock"></i>
+              <p>提升生产效率，缩短交货周期</p>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-industry"></i>
+              <p>适用于型材、角钢等棒材的切割优化排料</p>
+            </div>
+            <div class="feature-item">
+              <i class="fas fa-tools"></i>
+              <p>门窗加工、钢结构、铁塔、网架等企业必备利器</p>
+            </div>
+          </div>
+
+          <div class="materials-support">
+            <h2 class="section-title">支持多种材质</h2>
+            <div class="materials-grid">
+              <div class="material-item">
+                <div class="material-icon">
+                  <i class="fas fa-door-open"></i>
+                </div>
+                <span>门窗加工</span>
+              </div>
+              <div class="material-item">
+                <div class="material-icon">
+                  <i class="fas fa-couch"></i>
+                </div>
+                <span>家具加工</span>
+              </div>
+              <div class="material-item">
+                <div class="material-icon">
+                  <i class="fas fa-layer-group"></i>
+                </div>
+                <span>钢筋</span>
+              </div>
+              <div class="material-item">
+                <div class="material-icon">
+                  <i class="fas fa-gem"></i>
+                </div>
+                <span>石材</span>
+              </div>
+              <div class="material-item">
+                <div class="material-icon">
+                  <i class="fas fa-square"></i>
+                </div>
+                <span>铝板</span>
+              </div>
+              <div class="material-item">
+                <div class="material-icon">
+                  <i class="fas fa-grip-vertical"></i>
+                </div>
+                <span>型钢</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-cta">
+            <button class="btn btn-primary btn-lg" @click="scrollToCalculator">
+              <i class="fas fa-calculator me-2"></i>开始优化计算
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="container">
+    <div class="">
       <div class="row">
         <!-- 输入区域 -->
-        <div class="col-lg-4 input-section">
+        <div class="col-lg-3 input-section">
           <div class="card mb-4">
             <div class="card-body">
               <h3 class="card-title mb-4">原料规格</h3>
@@ -20,39 +90,17 @@
                   <label class="form-label">原料清单</label>
                   <div v-for="(stock, index) in stockList" :key="index" class="mb-2">
                     <div class="input-group">
-                      <input
-                        type="number"
-                        class="form-control"
-                        v-model="stock.length"
-                        placeholder="长度(mm)"
-                        required
-                        min="0"
-                        step="1"
-                      >
-                      <input
-                        type="number"
-                        class="form-control"
-                        v-model="stock.price"
-                        placeholder="单价"
-                        required
-                        min="0"
-                        step="0.01"
-                      >
-                      <button
-                        type="button"
-                        class="btn btn-danger"
-                        @click="removeStockItem(index)"
-                        :disabled="stockList.length === 1"
-                      >
+                      <input type="number" class="form-control" v-model="stock.length" placeholder="长度(mm)" required
+                        min="0" step="1">
+                      <input type="number" class="form-control" v-model="stock.price" placeholder="单价" required min="0"
+                        step="0.01">
+                      <button type="button" class="btn btn-danger" @click="removeStockItem(index)"
+                        :disabled="stockList.length === 1">
                         <i class="fas fa-times"></i>
                       </button>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    class="btn btn-success w-100 mb-3"
-                    @click="addStockItem"
-                  >
+                  <button type="button" class="btn btn-success w-100 mb-3" @click="addStockItem">
                     <i class="fas fa-plus me-2"></i>添加原料规格
                   </button>
                 </div>
@@ -62,38 +110,16 @@
                   <label class="form-label">切割清单</label>
                   <div v-for="(item, index) in cutList" :key="index" class="mb-2">
                     <div class="input-group">
-                      <input
-                        type="number"
-                        class="form-control"
-                        v-model="item.length"
-                        placeholder="长度(mm)"
-                        required
-                        min="0"
-                        step="1"
-                      >
-                      <input
-                        type="number"
-                        class="form-control"
-                        v-model="item.quantity"
-                        placeholder="数量"
-                        required
-                        min="1"
-                        step="1"
-                      >
-                      <button
-                        type="button"
-                        class="btn btn-danger"
-                        @click="removeCutItem(index)"
-                      >
+                      <input type="number" class="form-control" v-model="item.length" placeholder="长度(mm)" required
+                        min="0" step="1">
+                      <input type="number" class="form-control" v-model="item.quantity" placeholder="数量" required
+                        min="1" step="1">
+                      <button type="button" class="btn btn-danger" @click="removeCutItem(index)">
                         <i class="fas fa-times"></i>
                       </button>
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    class="btn btn-success w-100"
-                    @click="addCutItem"
-                  >
+                  <button type="button" class="btn btn-success w-100" @click="addCutItem">
                     <i class="fas fa-plus me-2"></i>添加切割项
                   </button>
                 </div>
@@ -101,14 +127,7 @@
                 <!-- 切割参数 -->
                 <div class="mb-3">
                   <label class="form-label">切割损耗 (mm)</label>
-                  <input
-                    type="number"
-                    class="form-control"
-                    v-model="sawKerf"
-                    required
-                    min="0"
-                    step="0.1"
-                  >
+                  <input type="number" class="form-control" v-model="sawKerf" required min="0" step="0.1">
                 </div>
 
                 <button type="submit" class="btn btn-primary w-100">
@@ -138,7 +157,7 @@
         </div>
 
         <!-- 结果展示区域 -->
-        <div class="col-lg-8">
+        <div class="col-lg-9">
           <!-- 优化结果统计 -->
           <div class="card mb-4">
             <div class="card-body">
@@ -216,13 +235,6 @@
             </div>
           </div>
 
-          <!-- 切割方案可视化 -->
-          <div class="card mb-4">
-            <div class="card-body">
-              <h3 class="card-title mb-4">切割方案可视化</h3>
-              <div class="cutting-visualization" ref="visualizationContainer"></div>
-            </div>
-          </div>
 
           <!-- 详细切割方案 -->
           <div class="card">
@@ -246,7 +258,7 @@
                         <td>{{ plan.originalSpec }}</td>
                         <td>{{ plan.cutDetails }}</td>
                         <td>
-                          <span :class="{'text-danger': plan.isWaste}">
+                          <span :class="{ 'text-danger': plan.isWaste }">
                             {{ plan.remainingLength }}mm
                           </span>
                         </td>
@@ -269,6 +281,15 @@
               </div>
             </div>
           </div>
+
+          <!-- 切割方案可视化 -->
+          <div class="card mb-4">
+            <div class="card-body">
+              <h3 class="card-title mb-4">切割方案可视化</h3>
+              <div class="cutting-visualization" ref="visualizationContainer"></div>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
@@ -286,7 +307,9 @@ const stockList = ref([
 ])
 const sawKerf = ref(4)  // 修改默认切割损耗为4mm
 const cutList = ref([
-  { length: 2990, quantity: 2 }  // 更新默认切割项以便测试
+  { length: 500, quantity: 8 },  // 更新默认切割项以便测试
+  { length: 350, quantity: 6 },
+  { length: 800, quantity: 6 }
 ])
 const utilization = ref(0)
 const totalBars = ref(0)
@@ -869,6 +892,14 @@ const exportToImage = () => {
   }
 }
 
+// 添加滚动到计算器区域的方法
+const scrollToCalculator = () => {
+  const calculatorElement = document.querySelector('.input-section')
+  if (calculatorElement) {
+    calculatorElement.scrollIntoView({ behavior: 'smooth' })
+  }
+}
+
 // 组件挂载时初始化
 onMounted(() => {
   calculateOptimization()
@@ -946,6 +977,210 @@ onMounted(() => {
 
   .input-section::-webkit-scrollbar-thumb:hover {
     background: #999;
+  }
+}
+
+.hero-section {
+  position: relative;
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  padding: 80px 0;
+  color: white;
+  text-align: center;
+  overflow: hidden;
+  margin-bottom: 2rem;
+}
+
+.hero-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('/pattern.png') repeat;
+  opacity: 0.1;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  animation: fadeInUp 0.8s ease-out;
+}
+
+.hero-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(120deg, #ffd700, #fff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-subtitle {
+  font-size: 1.8rem;
+  font-weight: 500;
+  margin-bottom: 3rem;
+  opacity: 0.9;
+}
+
+.hero-features {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 2rem;
+  margin: 3rem auto;
+  max-width: 1200px;
+  padding: 0 1rem;
+}
+
+.feature-item {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  backdrop-filter: blur(10px);
+  transition: transform 0.3s ease;
+}
+
+.feature-item:hover {
+  transform: translateY(-5px);
+}
+
+.feature-item i {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #ffd700;
+}
+
+.feature-item p {
+  font-size: 1.1rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.hero-cta {
+  margin-top: 3rem;
+}
+
+.hero-cta .btn {
+  padding: 1rem 2.5rem;
+  font-size: 1.2rem;
+  border-radius: 50px;
+  background: #ffd700;
+  border: none;
+  color: #1e3c72;
+  font-weight: 600;
+  box-shadow: 0 4px 15px rgba(255, 215, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.hero-cta .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    padding: 60px 0;
+  }
+  
+  .hero-title {
+    font-size: 2.2rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.4rem;
+  }
+  
+  .hero-features {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+.materials-support {
+  padding: 40px 0;
+  background: linear-gradient(to bottom, #1e3c72, #2a5298);
+  text-align: center;
+}
+
+.section-title {
+  color: #FFD700;
+  font-size: 2rem;
+  margin-bottom: 40px;
+  font-weight: bold;
+}
+
+.materials-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.material-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.material-item:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.material-icon {
+  width: 60px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  margin-bottom: 10px;
+}
+
+.material-icon i {
+  font-size: 24px;
+  color: #FFD700;
+}
+
+.material-item span {
+  color: white;
+  font-size: 1rem;
+}
+
+@media (max-width: 1200px) {
+  .materials-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .materials-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .materials-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style> 

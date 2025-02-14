@@ -129,6 +129,9 @@
                 <button class="btn btn-outline-primary" @click="exportToExcel">
                   <i class="fas fa-download me-2"></i>导出到Excel
                 </button>
+                <button class="btn btn-outline-primary" @click="exportToImage">
+                  <i class="fas fa-image me-2"></i>导出到图片
+                </button>
               </div>
             </div>
           </div>
@@ -801,6 +804,69 @@ const exportToExcel = () => {
 
   // 导出文件
   XLSX.writeFile(workbook, '切割优化方案.xlsx')
+}
+
+// 在script部分添加导出图片方法
+const exportToImage = () => {
+  if (!visualizationContainer.value) return;
+  
+  try {
+    // 获取SVG元素
+    const svg = visualizationContainer.value.querySelector('svg');
+    if (!svg) {
+      console.warn('未找到SVG元素');
+      return;
+    }
+
+    // 创建一个SVG的克隆，以便修改而不影响原始SVG
+    const clonedSvg = svg.cloneNode(true);
+    
+    // 设置白色背景
+    const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('width', '100%');
+    rect.setAttribute('height', '100%');
+    rect.setAttribute('fill', 'white');
+    clonedSvg.insertBefore(rect, clonedSvg.firstChild);
+
+    // 将SVG转换为字符串
+    const serializer = new XMLSerializer();
+    const svgStr = serializer.serializeToString(clonedSvg);
+    
+    // 创建Blob
+    const blob = new Blob([svgStr], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    
+    // 创建Canvas
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // 创建图片对象
+    const img = new Image();
+    img.onload = () => {
+      // 设置Canvas尺寸
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // 绘制图片
+      ctx.fillStyle = 'white';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      
+      // 转换为PNG并下载
+      const pngUrl = canvas.toDataURL('image/png');
+      const downloadLink = document.createElement('a');
+      downloadLink.href = pngUrl;
+      downloadLink.download = `门窗切割方案_${new Date().toISOString().slice(0,10)}.png`;
+      downloadLink.click();
+      
+      // 清理
+      URL.revokeObjectURL(url);
+    };
+    
+    img.src = url;
+  } catch (error) {
+    console.error('导出图片时出错:', error);
+  }
 }
 
 // 组件挂载时初始化

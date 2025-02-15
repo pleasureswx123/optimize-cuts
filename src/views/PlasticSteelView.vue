@@ -954,7 +954,7 @@ onMounted(() => {
 @media (min-width: 992px) {
   .input-section {
     position: sticky;
-    top: 20px;
+    top: 50px;
     max-height: calc(100vh - 40px);
     overflow-y: auto;
     z-index: 100;

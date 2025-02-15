@@ -17,6 +17,11 @@ const router = createRouter({
       path: '/glass',
       name: 'glass',
       component: () => import('../views/GlassView.vue')
+    },
+    {
+      path: '/contact',
+      name: 'contact',
+      component: () => import('../views/ContactView.vue')
     }
   ],
   scrollBehavior(to, from, savedPosition) {

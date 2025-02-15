@@ -25,6 +25,10 @@
               <i class="fas fa-clone"></i>
               <span>板材切割优化</span>
             </router-link>
+            <router-link to="/contact" class="nav-link" active-class="active">
+              <i class="fas fa-phone"></i>
+              <span>联系我们</span>
+            </router-link>
           </nav>
         </div>
       </div>

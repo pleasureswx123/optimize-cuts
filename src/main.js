@@ -3,6 +3,10 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import router from './router'
 
+// 导入 Element Plus
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+
 // 导入 Bootstrap 和 Font Awesome
 import 'bootstrap/dist/css/bootstrap.min.css'
 import 'bootstrap/dist/js/bootstrap.bundle.min.js'
@@ -23,6 +27,7 @@ const app = createApp(App)
 
 app.use(createPinia())
 app.use(router)
+app.use(ElementPlus)
 
 // 添加错误处理
 app.config.errorHandler = (err, vm, info) => {

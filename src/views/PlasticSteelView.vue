@@ -300,6 +300,7 @@
 import { ref, onMounted, computed } from 'vue'
 import * as d3 from 'd3'
 import * as XLSX from 'xlsx'
+import { ElMessage } from 'element-plus'
 
 // 状态定义
 const stockList = ref([
@@ -322,31 +323,79 @@ const materialUsageStats = ref([])  // 新增：原料使用统计
 // 添加原料规格
 const addStockItem = () => {
   stockList.value.push({
-    length: 6000,
+    length: 6000,  // 设置一个合理的默认值
     price: 100
   })
 }
 
 // 移除原料规格
 const removeStockItem = (index) => {
-  stockList.value.splice(index, 1)
+  if (stockList.value.length > 1) {
+    stockList.value.splice(index, 1)
+  } else {
+    ElMessage.warning('至少保留一个原料规格')
+  }
 }
 
 // 添加切割项
 const addCutItem = () => {
   cutList.value.push({
-    length: 0,
+    length: 500,  // 设置一个合理的默认值
     quantity: 1
   })
 }
 
 // 移除切割项
 const removeCutItem = (index) => {
-  cutList.value.splice(index, 1)
+  if (cutList.value.length > 1) {
+    cutList.value.splice(index, 1)
+  } else {
+    ElMessage.warning('至少保留一个切割需求')
+  }
 }
 
 // 计算优化方案
 const calculateOptimization = () => {
+  // 验证原料规格
+  const invalidStock = stockList.value.some(stock => stock.length <= 0 || stock.price <= 0);
+  if (invalidStock) {
+    ElMessage.error('原料长度和价格必须大于0');
+    return;
+  }
+
+  // 验证切割清单
+  const invalidCut = cutList.value.some(cut => cut.length <= 0 || cut.quantity <= 0);
+  if (invalidCut) {
+    ElMessage.error('切割长度和数量必须大于0');
+    return;
+  }
+
+  // 验证是否有切割需求
+  if (cutList.value.length === 0) {
+    ElMessage.warning('请添加切割需求');
+    return;
+  }
+
+  // 验证是否有原料规格
+  if (stockList.value.length === 0) {
+    ElMessage.warning('请添加原料规格');
+    return;
+  }
+
+  // 验证切割长度不能大于最大原料长度
+  const maxStockLength = Math.max(...stockList.value.map(stock => stock.length));
+  const invalidLength = cutList.value.some(cut => cut.length > maxStockLength);
+  if (invalidLength) {
+    ElMessage.error(`切割长度不能大于最大原料长度${maxStockLength}mm`);
+    return;
+  }
+
+  // 验证切割损耗
+  if (sawKerf.value < 0) {
+    ElMessage.error('切割损耗不能小于0');
+    return;
+  }
+
   console.group('切割优化计算');
   console.log('%c输入参数', 'color: #2196F3; font-weight: bold');
   console.log('1. 切割需求:', cutList.value.map(item => ({

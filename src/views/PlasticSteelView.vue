@@ -347,104 +347,180 @@ const removeCutItem = (index) => {
 
 // 计算优化方案
 const calculateOptimization = () => {
-  // 1. 数据预处理：按长度分组并记录需求数量
-  const requirements = new Map()
-  cutList.value.forEach(item => {
-    const key = item.length
-    requirements.set(key, (requirements.get(key) || 0) + item.quantity)
-  })
+  console.group('切割优化计算');
+  console.log('%c输入参数', 'color: #2196F3; font-weight: bold');
+  console.log('1. 切割需求:', cutList.value.map(item => ({
+    length: item.length + 'mm',
+    quantity: item.quantity + '根'
+  })));
+  console.log('2. 原料规格:', stockList.value.map(item => ({
+    length: item.length + 'mm',
+    price: '¥' + item.price
+  })));
+  console.log('3. 切割损耗:', sawKerf.value + 'mm');
 
-  // 2. 获取所有切割长度并按降序排序
-  const cutLengths = Array.from(requirements.keys()).sort((a, b) => b - a)
+  // 1. 预处理数据
+  const startTime = performance.now();
   
-  // 3. 计算单个原料的最优切割方案
-  const findBestPattern = (stockLength, reqs) => {
-    const patterns = []
-    
-    const tryPattern = (remaining, current = [], usedLengths = new Set()) => {
-      // 计算当前方案的总长度（包含切割损耗）
-      const totalLength = current.reduce((sum, cut) => {
-        return sum + cut.length + (current.length > 1 ? sawKerf.value : 0)
-      }, 0)
+  // 按长度降序排序切割需求并合并相同长度
+  const cutLengths = new Map();
+  cutList.value.forEach(req => {
+    const length = req.length;
+    cutLengths.set(length, (cutLengths.get(length) || 0) + req.quantity);
+  });
+
+  // 按性价比（长度/价格）降序排序原料规格
+  const sortedStocks = [...stockList.value].sort((a, b) => (b.length / b.price) - (a.length / a.price));
+
+  // 2. 优化算法实现
+  const result = [];
+  const remainingCuts = new Map(cutLengths);
+
+  while ([...remainingCuts.values()].some(qty => qty > 0)) {
+    let bestStock = null;
+    let bestPattern = null;
+    let bestEfficiency = -1;
+
+    // 对每种原料规格尝试切割方案
+    for (const stock of sortedStocks) {
+      const pattern = findBestPattern(remainingCuts, stock.length);
       
-      patterns.push({
-        cuts: [...current],
-        remaining: stockLength - totalLength,
-        efficiency: totalLength / stockLength
-      })
-      
-      for (const length of cutLengths) {
-        // 考虑切割损耗进行判断
-        const needSpace = length + (current.length > 0 ? sawKerf.value : 0)
-        if (reqs.get(length) > 0 && needSpace <= remaining) {
-          reqs.set(length, reqs.get(length) - 1)
-          current.push({ length, position: stockLength - remaining })
-          tryPattern(remaining - needSpace, current, new Set([...usedLengths, length]))
-          current.pop()
-          reqs.set(length, reqs.get(length) + 1)
-        }
+      if (pattern && pattern.efficiency > bestEfficiency) {
+        bestEfficiency = pattern.efficiency;
+        bestPattern = pattern;
+        bestStock = stock;
       }
     }
-    
-    tryPattern(stockLength)
-    return patterns.sort((a, b) => b.efficiency - a.efficiency)[0]
-  }
-  
-  // 4. 生成切割方案
-  const result = []
-  const remainingReqs = new Map(requirements)
-  
-  // 记录已使用的方案效率
-  const usedPatterns = new Map()
-  
-  while (Array.from(remainingReqs.values()).some(qty => qty > 0)) {
-    let bestStock = null
-    let bestPattern = null
-    let maxEfficiency = 0
-    
-    // 为每种规格的原料生成切割方案
-    for (const stock of stockList.value) {
-      const pattern = findBestPattern(stock.length, remainingReqs)
-      
-      // 计算方案效率
-      const efficiency = pattern.efficiency
-      
-      // 如果效率更高，更新最佳方案
-      if (efficiency > maxEfficiency) {
-        maxEfficiency = efficiency
-        bestStock = stock
-        bestPattern = pattern
-      }
-    }
-    
-    // 如果找到可行方案
-    if (bestPattern) {
-      // 更新剩余需求
-      bestPattern.cuts.forEach(cut => {
-        remainingReqs.set(cut.length, remainingReqs.get(cut.length) - 1)
-      })
-      
-      // 添加到结果中
+
+    if (bestPattern && bestStock) {
       result.push({
         stock: bestStock,
-        cuts: bestPattern.cuts,
+        pattern: bestPattern.cuts,
         efficiency: bestPattern.efficiency,
-        waste: bestPattern.remaining
-      })
+        waste: bestPattern.waste
+      });
+
+      // 更新剩余切割需求
+      bestPattern.cuts.forEach(cut => {
+        const remaining = remainingCuts.get(cut) - 1;
+        if (remaining > 0) {
+          remainingCuts.set(cut, remaining);
+        } else {
+          remainingCuts.delete(cut);
+        }
+      });
     } else {
-      // 如果没有找到可行方案，说明所有需求已满足
-      break
+      console.error('无法找到合适的切割方案');
+      break;
     }
   }
 
-  // 5. 更新统计数据
-  updateStats(result)
+  // 3. 更新统计数据
+  updateStats(result);
 
-  // 6. 生成切割方案
-  generateCuttingPlan(result)
+  // 4. 生成切割方案
+  generateCuttingPlan(result);
 
-  // 7. 更新可视化
-  updateVisualization(result)
+  // 5. 更新可视化
+  updateVisualization(result);
+
+  const endTime = performance.now();
+  const executionTime = endTime - startTime;
+
+  // 输出优化结果日志
+  console.log('\n%c优化结果', 'color: #4CAF50; font-weight: bold');
+  console.log('1. 总方案数:', result.length, '个');
+  console.log('2. 详细方案:');
+  result.forEach((r, i) => {
+    console.group(`方案 ${i + 1}`);
+    console.log('原料规格:', r.stock.length + 'mm');
+    console.log('原料单价:', '¥' + r.stock.price);
+    console.log('切割明细:', r.pattern.join('mm, ') + 'mm');
+    console.log('利用率:', r.efficiency.toFixed(2) + '%');
+    console.log('剩余长度:', r.waste + 'mm');
+    console.groupEnd();
+  });
+
+  console.log('\n%c统计数据', 'color: #FF9800; font-weight: bold');
+  console.log('1. 材料利用率:', utilization.value.toFixed(2) + '%');
+  console.log('2. 总原料数:', totalBars.value, '根');
+  console.log('3. 总废料长度:', wasteLength.value.toFixed(2) + 'mm');
+  console.log('4. 总成本:', '¥' + totalCost.value.toFixed(2));
+  console.log('5. 执行时间:', executionTime.toFixed(2) + 'ms');
+
+  console.log('\n%c原料使用统计', 'color: #9C27B0; font-weight: bold');
+  materialUsageStats.value.forEach(stat => {
+    console.log(
+      `规格: ${stat.spec}mm`,
+      `单价: ¥${stat.price}`,
+      `数量: ${stat.quantity}根`,
+      `总价: ¥${stat.total}`
+    );
+  });
+
+  console.groupEnd();
+}
+
+// 辅助函数：找到最佳切割方案
+const findBestPattern = (remainingCuts, stockLength) => {
+  let bestPattern = {
+    cuts: [],
+    waste: stockLength,
+    efficiency: 0
+  };
+
+  // 获取所有可用的切割长度，按降序排序
+  const availableCuts = [...remainingCuts.entries()]
+    .filter(([_, qty]) => qty > 0)
+    .map(([length]) => length)
+    .sort((a, b) => b - a);
+
+  // 使用迭代方法而不是递归，避免栈溢出
+  const stack = [{
+    cuts: [],
+    currentLength: 0,
+    startIndex: 0
+  }];
+
+  while (stack.length > 0) {
+    const { cuts, currentLength, startIndex } = stack.pop();
+
+    // 计算当前方案的效率
+    const efficiency = (currentLength / stockLength) * 100;
+    const waste = stockLength - currentLength;
+
+    // 如果当前方案更好，更新最佳方案
+    if (efficiency > bestPattern.efficiency || 
+        (efficiency === bestPattern.efficiency && waste < bestPattern.waste)) {
+      bestPattern = {
+        cuts: [...cuts],
+        waste,
+        efficiency
+      };
+    }
+
+    // 如果已经达到最大切割数或无法继续切割，跳过
+    if (cuts.length >= 10 || startIndex >= availableCuts.length) {
+      continue;
+    }
+
+    // 尝试添加新的切割
+    for (let i = startIndex; i < availableCuts.length; i++) {
+      const cut = availableCuts[i];
+      const newLength = currentLength + cut + (cuts.length > 0 ? sawKerf.value : 0);
+
+      if (newLength <= stockLength && remainingCuts.get(cut) > 
+          cuts.filter(c => c === cut).length) {
+        stack.push({
+          cuts: [...cuts, cut],
+          currentLength: newLength,
+          startIndex: i
+        });
+      }
+    }
+  }
+
+  return bestPattern;
 }
 
 // 更新统计数据
@@ -463,8 +539,8 @@ const updateStats = (result) => {
     totalStockCost += stock.price
     
     // 计算实际使用长度（包括切割损耗）
-    const usedLength = plan.cuts.reduce((sum, cut) => sum + cut.length, 0)
-    const lossLength = (plan.cuts.length - 1) * sawKerf.value
+    const usedLength = plan.pattern.reduce((sum, cut) => sum + cut, 0)
+    const lossLength = (plan.pattern.length - 1) * sawKerf.value
     
     totalUsedLength += usedLength
     totalLossLength += lossLength
@@ -499,14 +575,14 @@ const generateCuttingPlan = (result) => {
   const groupedPlan = result.map((stock, stockIndex) => {
     // 统计每种长度的数量
     const lengthCounts = new Map()
-    stock.cuts.forEach(cut => {
-      const key = cut.length
+    stock.pattern.forEach(cut => {
+      const key = cut
       lengthCounts.set(key, (lengthCounts.get(key) || 0) + 1)
     })
     
     // 计算当前原料的利用率 - 修改计算逻辑
-    const totalCutLength = stock.cuts.reduce((sum, cut) => sum + cut.length, 0) // 实际切割长度
-    const totalLoss = (stock.cuts.length - 1) * sawKerf.value // 切割损耗总长度
+    const totalCutLength = stock.pattern.reduce((sum, cut) => sum + cut, 0) // 实际切割长度
+    const totalLoss = (stock.pattern.length - 1) * sawKerf.value // 切割损耗总长度
     const totalUsed = totalCutLength + totalLoss // 总使用长度（包含切割损耗）
     const utilization = Number(((totalUsed / stock.stock.length) * 100).toFixed(2)) // 计算利用率，保留两位小数
     
@@ -561,8 +637,8 @@ const updateVisualization = (result) => {
   // 获取所有不同的切割长度
   const uniqueLengths = new Set()
   result.forEach(plan => {
-    plan.cuts.forEach(cut => {
-      uniqueLengths.add(cut.length)
+    plan.pattern.forEach(cut => {
+      uniqueLengths.add(cut)
     })
   })
   
@@ -597,8 +673,8 @@ const updateVisualization = (result) => {
     let accumPosition = 0
 
     // 绘制切割段
-    plan.cuts.forEach(cut => {
-      const cutWidth = xScale(cut.length)
+    plan.pattern.forEach(cut => {
+      const cutWidth = xScale(cut)
       const cutX = xScale(accumPosition)
       
       if (isNaN(cutWidth) || isNaN(cutX)) return
@@ -609,7 +685,7 @@ const updateVisualization = (result) => {
         .attr('y', 0)
         .attr('width', cutWidth)
         .attr('height', barHeight)
-        .attr('fill', colorMap.get(cut.length))
+        .attr('fill', colorMap.get(cut))
         .attr('stroke', 'white')
 
       // 切割段标签
@@ -621,10 +697,10 @@ const updateVisualization = (result) => {
           .attr('text-anchor', 'middle')
           .attr('fill', 'white')
           .attr('class', 'cut-label')
-          .text(cut.length)
+          .text(cut)
       }
 
-      accumPosition += cut.length + sawKerf.value
+      accumPosition += cut + sawKerf.value
     })
 
     // 显示余料

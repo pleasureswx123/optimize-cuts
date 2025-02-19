@@ -363,6 +363,7 @@ import * as d3 from 'd3'
 import * as XLSX from 'xlsx'
 // 引入优化算法
 import optimizeCuts from '../utils/CuttingOptimizer';
+import { ElMessage } from 'element-plus';
 
 // 状态定义
 const stockList = ref([
@@ -475,6 +476,57 @@ const removeCutItem = (index) => {
 }
 
 const calculateOptimization = () => {
+  // 验证原料清单
+  if (stockList.value.length === 0) {
+    ElMessage.error('请添加至少一个原料规格')
+    return
+  }
+
+  // 验证原料规格的宽度、高度和价格
+  const invalidStock = stockList.value.some(stock => stock.width <= 0 || stock.height <= 0 || stock.price <= 0)
+  if (invalidStock) {
+    ElMessage.error('原料的宽度、高度和价格必须大于0')
+    return
+  }
+
+  // 验证切割清单
+  if (cutList.value.length === 0) {
+    ElMessage.error('请添加至少一个切割项')
+    return
+  }
+
+  // 验证切割项的宽度、高度和数量
+  const invalidCut = cutList.value.some(cut => cut.width <= 0 || cut.height <= 0 || cut.quantity <= 0)
+  if (invalidCut) {
+    ElMessage.error('切割项的宽度、高度和数量必须大于0')
+    return
+  }
+
+  // 验证切割项尺寸不能大于最大原料尺寸
+  const maxStockWidth = Math.max(...stockList.value.map(stock => stock.width))
+  const maxStockHeight = Math.max(...stockList.value.map(stock => stock.height))
+  
+  const invalidSize = cutList.value.some(cut => {
+    // 如果允许旋转，检查两种方向都不能放下
+    if (cut.canRotate) {
+      return (cut.width > maxStockWidth && cut.width > maxStockHeight) || 
+             (cut.height > maxStockWidth && cut.height > maxStockHeight)
+    }
+    // 如果不允许旋转，直接检查当前方向
+    return cut.width > maxStockWidth || cut.height > maxStockHeight
+  })
+  
+  if (invalidSize) {
+    ElMessage.error('切割项尺寸不能大于原料尺寸')
+    return
+  }
+
+  // 验证切割损耗
+  if (cuttingLoss.value < 0) {
+    ElMessage.error('切割损耗不能小于0')
+    return
+  }
+
   const config = {
     optimizationStrategy: optimizationStrategy.value,
     layoutStrategy: layoutStrategy.value,

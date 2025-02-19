@@ -65,6 +65,30 @@
         </div>
       </section>
 
+      <!-- 视频演示区域 -->
+      <section class="video-demo-section py-5">
+        <div class="container">
+          <h2 class="text-center mb-5">产品演示视频</h2>
+          <div class="video-container" ref="videoContainer">
+            <video 
+              ref="demoVideo"
+              class="demo-video" 
+              preload="metadata"
+              poster="@/assets/video-poster.jpg"
+              :controls="false">
+              <source src="@/assets/demo.mp4" type="video/mp4">
+              您的浏览器不支持视频播放。
+            </video>
+            <div class="video-controls" :class="{ 'controls-visible': isControlsVisible }">
+              <button class="play-pause-btn" @click="togglePlay">
+                <i :class="isPlaying ? 'fas fa-pause' : 'fas fa-play'"></i>
+              </button>
+            </div>
+          </div>
+          <p class="text-center mt-4">通过这个演示视频，您可以快速了解我们的智能切割优化系统如何帮助您提高工作效率</p>
+        </div>
+      </section>
+
       <!-- 优势展示区域 -->
       <section class="benefits-section">
         <div class="container">
@@ -138,15 +162,108 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 const loading = ref(true)
+const demoVideo = ref(null)
+const videoContainer = ref(null)
+const isPlaying = ref(false)
+const isControlsVisible = ref(false)
+
+// 视频播放控制
+const togglePlay = () => {
+  if (demoVideo.value) {
+    if (demoVideo.value.paused) {
+      demoVideo.value.play()
+      isPlaying.value = true
+    } else {
+      demoVideo.value.pause()
+      isPlaying.value = false
+    }
+  }
+}
+
+// 监听视频播放状态变化
+const handleVideoStateChange = () => {
+  if (demoVideo.value) {
+    isPlaying.value = !demoVideo.value.paused
+  }
+}
+
+// 处理视频播放结束
+const handleVideoEnded = () => {
+  // 检查视频是否仍在可视区域内
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting && demoVideo.value) {
+        // 如果视频区域可见，则重新播放
+        demoVideo.value.currentTime = 0
+        demoVideo.value.play()
+      }
+    })
+    observer.disconnect() // 用完即销毁
+  }, {
+    threshold: 0.5
+  })
+
+  if (videoContainer.value) {
+    observer.observe(videoContainer.value)
+  }
+}
+
+// 创建交叉观察器
+let observer = null
 
 onMounted(() => {
   // 模拟内容加载
   setTimeout(() => {
     loading.value = false
   }, 500)
+
+  // 添加视频事件监听
+  if (demoVideo.value) {
+    demoVideo.value.addEventListener('play', handleVideoStateChange)
+    demoVideo.value.addEventListener('pause', handleVideoStateChange)
+    demoVideo.value.addEventListener('ended', handleVideoEnded)
+  }
+
+  // 创建交叉观察器
+  observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        // 视频进入视口
+        if (demoVideo.value && demoVideo.value.paused) {
+          demoVideo.value.play()
+        }
+      } else {
+        // 视频离开视口
+        if (demoVideo.value && !demoVideo.value.paused) {
+          demoVideo.value.pause()
+        }
+      }
+    })
+  }, {
+    threshold: 0.5 // 当视频元素50%可见时触发
+  })
+
+  // 开始观察视频元素
+  if (videoContainer.value) {
+    observer.observe(videoContainer.value)
+  }
+})
+
+onUnmounted(() => {
+  // 清理事件监听
+  if (demoVideo.value) {
+    demoVideo.value.removeEventListener('play', handleVideoStateChange)
+    demoVideo.value.removeEventListener('pause', handleVideoStateChange)
+    demoVideo.value.removeEventListener('ended', handleVideoEnded)
+  }
+
+  // 停止观察
+  if (observer) {
+    observer.disconnect()
+  }
 })
 </script>
 
@@ -515,5 +632,83 @@ onMounted(() => {
   font-weight: 600;
   color: #2c3e50;
   margin-bottom: 1.5rem;
+}
+
+.video-demo-section {
+  background: var(--light-bg);
+  position: relative;
+}
+
+.video-container {
+  max-width: 1000px;
+  margin: 0 auto;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.demo-video {
+  width: 100%;
+  display: block;
+  aspect-ratio: 16/9;
+  background: #000;
+}
+
+/* 视频控制器样式 */
+.video-controls {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.video-container:hover .video-controls {
+  opacity: 1;
+}
+
+.play-pause-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.play-pause-btn:hover {
+  background: #fff;
+  transform: scale(1.1);
+}
+
+.play-pause-btn i {
+  font-size: 24px;
+  color: #333;
+}
+
+@media (max-width: 768px) {
+  .video-container {
+    margin: 0 15px;
+  }
+  
+  .play-pause-btn {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .play-pause-btn i {
+    font-size: 20px;
+  }
 }
 </style> 

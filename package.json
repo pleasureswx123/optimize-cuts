@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "electron:dev": "NODE_ENV=development concurrently \"vite --host\" \"wait-on tcp:5173 && electron .\"",
     "electron:build": "npm run build && electron-builder",
-    "electron:build:mac": "npm run build && electron-builder --mac",
+    "electron:build:mac": "ELECTRON_CACHE=~/Library/Caches/electron && npm run build && electron-builder --mac",
     "electron:build:win": "npm run build && electron-builder --win",
     "electron:build:linux": "npm run build && electron-builder --linux",
     "clean": "rm -rf node_modules package-lock.json dist release"

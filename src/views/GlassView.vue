@@ -6,7 +6,7 @@
         <div class="hero-content">
           <h1 class="hero-title">极致省材，智慧切割</h1>
           <h2 class="hero-subtitle">您的板材智能切割最佳助手</h2>
-          
+
           <div class="hero-features">
             <div class="feature-item">
               <i class="fas fa-chart-line"></i>
@@ -25,7 +25,7 @@
               <p>极致节省，确保材料利用率最大化</p>
             </div>
           </div>
-          
+
           <div class="materials-support">
             <h4>支持多种材质</h4>
             <div class="materials-grid">
@@ -153,13 +153,13 @@
             <div class="card-body">
               <h3 class="card-title mb-4">数据导入导出</h3>
               <div class="d-grid gap-2">
-                <button class="btn btn-outline-primary" @click="importFromExcel">
+                <button class="btn btn-success" @click="importFromExcel">
                   <i class="fas fa-file-excel me-2"></i>从Excel导入
                 </button>
-                <button class="btn btn-outline-primary" @click="exportToExcel">
+                <button class="btn btn-success" @click="exportToExcel">
                   <i class="fas fa-download me-2"></i>导出到Excel
                 </button>
-                <button class="btn btn-outline-primary" @click="exportToImage">
+                <button class="btn btn-success" @click="exportToImage">
                   <i class="fas fa-image me-2"></i>导出到图片
                 </button>
               </div>

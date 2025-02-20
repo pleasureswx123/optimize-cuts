@@ -142,13 +142,13 @@
             <div class="card-body">
               <h3 class="card-title mb-4">数据导入导出</h3>
               <div class="d-grid gap-2">
-                <button class="btn btn-outline-primary" @click="importFromExcel">
+                <button class="btn btn-success" @click="importFromExcel">
                   <i class="fas fa-file-excel me-2"></i>从Excel导入
                 </button>
-                <button class="btn btn-outline-primary" @click="exportToExcel">
+                <button class="btn btn-success" @click="exportToExcel">
                   <i class="fas fa-download me-2"></i>导出到Excel
                 </button>
-                <button class="btn btn-outline-primary" @click="exportToImage">
+                <button class="btn btn-success" @click="exportToImage">
                   <i class="fas fa-image me-2"></i>导出到图片
                 </button>
               </div>
@@ -299,7 +299,8 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import * as d3 from 'd3'
-import * as XLSX from 'xlsx'
+import * as XLSX from 'xlsx'  // 保留XLSX用于导入功能
+import ExcelJS from 'exceljs'
 import { ElMessage } from 'element-plus'
 
 // 状态定义
@@ -820,13 +821,6 @@ const updateVisualization = (result) => {
   const legend = svg.append('g')
     .attr('class', 'legend')
     .attr('transform', `translate(${width + 20}, 0)`)
-    .append('rect')
-    .attr('width', 100)
-    .attr('height', uniqueLengths.size * 25 + 10)
-    .attr('fill', '#f8f9fa')
-    .attr('stroke', '#dee2e6')
-    .attr('rx', 4)
-    .attr('ry', 4)
 
   const legendGroup = svg.select('.legend')
     .append('g')
@@ -932,26 +926,141 @@ const importFromExcel = () => {
   input.click()
 }
 
-const exportToExcel = () => {
+const exportToExcel = async () => {
   // 创建工作簿
-  const workbook = XLSX.utils.book_new()
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('切割优化方案');
 
-  // 添加切割方案
-  const planSheet = XLSX.utils.json_to_sheet(cuttingPlan.value)
-  XLSX.utils.book_append_sheet(workbook, planSheet, '切割方案')
+  // 设置列宽
+  worksheet.columns = [
+    { width: 15 },  // A列
+    { width: 15 },  // B列
+    { width: 40 },  // C列
+    { width: 15 },  // D列
+    { width: 15 }  // E列
+  ];
 
-  // 添加统计数据
-  const statsData = [{
-    总原料数: totalBars.value,
-    材料利用率: `${utilization.value}%`,
-    总废料长度: wasteLength.value,
-    总成本: totalCost.value
-  }]
-  const statsSheet = XLSX.utils.json_to_sheet(statsData)
-  XLSX.utils.book_append_sheet(workbook, statsSheet, '统计数据')
+  // 准备数据
+  const data = [
+    ['门窗下料优化方案'],
+    [],  // 空行
+    ['原料尺寸清单'],
+    ['序号', '长度(mm)', '单价(元)'],
+    ...stockList.value.map((stock, index) => [
+      index + 1, 
+      stock.length, 
+      stock.price
+    ]),
+    [],  // 空行
+    ['下料尺寸清单'],
+    ['序号', '长度(mm)', '数量(根)'],
+    ...cutList.value.map((cut, index) => [
+      index + 1, 
+      cut.length, 
+      cut.quantity
+    ]),
+    [],  // 空行
+    ['切割优化方案'],
+    ['原料编号', '原料规格', '切割明细', '剩余长度(mm)', '利用率(%)'],
+    ...cuttingPlan.value.map((plan, index) => [
+      index + 1,
+      plan.originalSpec,
+      plan.cutDetails,
+      `${plan.remainingLength.toFixed(2)}mm`,
+      `${plan.utilization.toFixed(2)}%`
+    ]),
+    [],  // 空行
+    ['总计数据'],
+    ['总原料数(根)', '材料利用率(%)', '总废料长度(mm)', '总成本(元)'],
+    [
+      totalBars.value,
+      `${utilization.value.toFixed(2)}%`,
+      `${wasteLength.value.toFixed(2)}mm`,
+      `${totalCost.value.toFixed(2)}元`
+    ]
+  ];
+
+  // 添加数据到工作表
+  worksheet.addRows(data);
+
+  // 设置合并单元格
+  worksheet.mergeCells('A1:E1');  // 主标题
+  // worksheet.mergeCells('A3:C3');  // 原料清单标题
+  // worksheet.mergeCells(`A${7 + stockList.value.length}:C${7 + stockList.value.length}`);  // 下料清单标题
+  // worksheet.mergeCells(`A${11 + stockList.value.length + cutList.value.length}:E${11 + stockList.value.length + cutList.value.length}`);  // 切割方案标题
+  // worksheet.mergeCells(`A${15 + stockList.value.length + cutList.value.length + cuttingPlan.value.length}:B${15 + stockList.value.length + cutList.value.length + cuttingPlan.value.length}`);  // 总计数据标题
+
+  // 应用样式
+  worksheet.eachRow((row, rowNumber) => {
+    // 设置行高
+    row.height = 25;
+
+    row.eachCell((cell) => {
+      // 基础样式
+      cell.font = { name: '微软雅黑', size: 11 };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.border = {
+        top: { style: 'thin' },
+        bottom: { style: 'thin' },
+        left: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+      // 定义行号常量
+      const TITLE_ROW = 1;
+      const STOCK_LIST_LENGTH = stockList.value.length;
+      const CUT_LIST_LENGTH = cutList.value.length;
+      const CUTTING_PLAN_LENGTH = cuttingPlan.value.length;
+
+      const SUBTITLE_ROWS = [
+        3,
+        6 + STOCK_LIST_LENGTH,
+        9 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH,
+        12 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH + CUTTING_PLAN_LENGTH
+      ];
+      const HEADER_ROWS = [
+        4,
+        7 + STOCK_LIST_LENGTH,
+        10 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH,
+        13 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH + CUTTING_PLAN_LENGTH
+      ];
+      // 特殊样式
+      if (rowNumber === TITLE_ROW) {
+        // 主标题
+        cell.font = { name: '微软雅黑', size: 16, bold: true };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF9BC2E6' }
+        };
+      } else if (SUBTITLE_ROWS.includes(rowNumber)) {
+        // 子标题
+        // cell.font = { name: '微软雅黑', size: 14, bold: true };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE2F0D9' }
+        };
+      } else if (HEADER_ROWS.includes(rowNumber)) {
+        // 表头
+        cell.font = { name: '微软雅黑', size: 11, bold: true };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFDDEBF7' }
+        };
+      }
+    });
+  });
 
   // 导出文件
-  XLSX.writeFile(workbook, '切割优化方案.xlsx')
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = '门窗下料优化方案.xlsx';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 // 在script部分添加导出图片方法

@@ -80,7 +80,7 @@
     <div class="">
       <div class="row">
         <!-- 输入区域 -->
-        <div class="col-lg-3 input-section">
+        <div class="col-lg-3 input-section pb-lg-5">
           <div class="card mb-4">
             <div class="card-body">
               <h3 class="card-title mb-4">原料规格</h3>
@@ -140,17 +140,32 @@
           <!-- 导入导出 -->
           <div class="card mb-4">
             <div class="card-body">
-              <h3 class="card-title mb-4">数据导入导出</h3>
-              <div class="d-grid gap-2">
-                <button class="btn btn-success" @click="importFromExcel">
-                  <i class="fas fa-file-excel me-2"></i>从Excel导入
-                </button>
-                <button class="btn btn-success" @click="exportToExcel">
-                  <i class="fas fa-download me-2"></i>导出到Excel
-                </button>
-                <button class="btn btn-success" @click="exportToImage">
-                  <i class="fas fa-image me-2"></i>导出到图片
-                </button>
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="card-title mb-0">数据导入导出</h3>
+                <a href="#" class="text-primary text-decoration-none" @click.prevent="downloadTemplate" title="下载Excel模板">
+                  <i class="fas fa-file-download"></i>
+                  <small class="ms-1">下载模板</small>
+                </a>
+              </div>
+              <div class="d-flex justify-content-between">
+                <div class="btn-icon-with-label">
+                  <button class="btn btn-icon" @click="importFromExcel" title="从Excel导入">
+                    <i class="fas fa-file-import text-success"></i>
+                  </button>
+                  <span class="btn-label">从Excel导入</span>
+                </div>
+                <div class="btn-icon-with-label">
+                  <button class="btn btn-icon" @click="exportToExcel" title="导出到Excel">
+                    <i class="fas fa-file-export text-success"></i>
+                  </button>
+                  <span class="btn-label">导出到Excel</span>
+                </div>
+                <div class="btn-icon-with-label">
+                  <button class="btn btn-icon" @click="exportToImage" title="导出到图片">
+                    <i class="fas fa-images text-success"></i>
+                  </button>
+                  <span class="btn-label">导出到图片</span>
+                </div>
               </div>
             </div>
           </div>
@@ -299,7 +314,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import * as d3 from 'd3'
-import * as XLSX from 'xlsx'  // 保留XLSX用于导入功能
 import ExcelJS from 'exceljs'
 import { ElMessage } from 'element-plus'
 
@@ -890,40 +904,128 @@ style.textContent = `
 document.head.appendChild(style)
 
 // 导入导出功能
+const downloadTemplate = async () => {
+  // 创建工作簿
+  const workbook = new ExcelJS.Workbook();
+  
+  // 创建原料清单工作表
+  const stockSheet = workbook.addWorksheet('原料清单');
+  stockSheet.columns = [
+    { header: '序号', width: 10 },
+    { header: '长度(mm)', width: 15 },
+    { header: '单价(元)', width: 15 }
+  ];
+  
+  // 添加示例数据
+  stockSheet.addRow([1, 6000, 100]);
+  
+  // 创建切割清单工作表
+  const cutSheet = workbook.addWorksheet('切割清单');
+  cutSheet.columns = [
+    { header: '序号', width: 10 },
+    { header: '长度(mm)', width: 15 },
+    { header: '数量(根)', width: 15 }
+  ];
+  
+  // 添加示例数据
+  cutSheet.addRows([
+    [1, 800, 3],
+    [2, 500, 1],
+    [3, 350, 6]
+  ]);
+  
+  // 设置表头样式
+  [stockSheet, cutSheet].forEach(sheet => {
+    sheet.getRow(1).font = { name: '微软雅黑', size: 11, bold: true };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFDDEBF7' }
+    };
+    
+    // 添加说明行
+    sheet.insertRow(1, ['请按照以下格式填写数据']);
+    sheet.getRow(1).font = { name: '微软雅黑', size: 12, bold: true, color: { argb: 'FF0000FF' } };
+    sheet.mergeCells('A1:C1');
+    sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+  });
+
+  // 导出文件
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = '门窗下料优化方案模板.xlsx';
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 const importFromExcel = () => {
-  const input = document.createElement('input')
-  input.type = 'file'
-  input.accept = '.xlsx,.xls'
-  input.onchange = e => {
-    const file = e.target.files[0]
-    const reader = new FileReader()
-    reader.onload = e => {
-      const data = new Uint8Array(e.target.result)
-      const workbook = XLSX.read(data, { type: 'array' })
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.xlsx,.xls';
+  
+  input.onchange = async (e) => {
+    try {
+      const file = e.target.files[0];
+      const buffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer);
       
       // 读取原料清单
-      const stockSheet = workbook.Sheets['原料清单']
+      const stockSheet = workbook.getWorksheet('原料清单');
       if (stockSheet) {
-        const stockData = XLSX.utils.sheet_to_json(stockSheet)
-        stockList.value = stockData.map(row => ({
-          length: row.length || 6000,
-          price: row.price || 100
-        }))
+        const stockData = [];
+        stockSheet.eachRow((row, rowNumber) => {
+          // 跳过前两行（说明行和表头）
+          if (rowNumber > 2) {
+            const [_, sn, length, price] = row.values;
+            if (length && price) {
+              stockData.push({
+                length: Number(length),
+                price: Number(price)
+              });
+            }
+          }
+        });
+        if (stockData.length > 0) {
+          stockList.value = stockData;
+        }
       }
-
+      
       // 读取切割清单
-      const cutSheet = workbook.Sheets['切割清单']
+      const cutSheet = workbook.getWorksheet('切割清单');
       if (cutSheet) {
-        const cutData = XLSX.utils.sheet_to_json(cutSheet)
-        cutList.value = cutData.map(row => ({
-          length: row.length || 0,
-          quantity: row.quantity || 1
-        }))
+        const cutData = [];
+        cutSheet.eachRow((row, rowNumber) => {
+          // 跳过前两行（说明行和表头）
+          if (rowNumber > 2) {
+            const [_, sn, length, quantity] = row.values;
+            if (length && quantity) {
+              cutData.push({
+                length: Number(length),
+                quantity: Number(quantity)
+              });
+            }
+          }
+        });
+        if (cutData.length > 0) {
+          cutList.value = cutData;
+        }
       }
+      
+      ElMessage.success('数据导入成功');
+      // 导入后自动计算优化方案
+      calculateOptimization();
+      
+    } catch (error) {
+      console.error('导入Excel文件时出错:', error);
+      ElMessage.error('导入失败，请确保文件格式正确');
     }
-    reader.readAsArrayBuffer(file)
-  }
-  input.click()
+  };
+  
+  input.click();
 }
 
 const exportToExcel = async () => {
@@ -1416,5 +1518,44 @@ onMounted(() => {
   .materials-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.btn-icon {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-radius: 50%;
+  background: #2ecc71 !important;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background: #27ae60 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(40, 167, 69, 0.2);
+}
+
+.btn-icon i {
+  font-size: 1.8rem;
+}
+
+.text-success {
+  color: #fff !important;
+}
+
+.btn-icon-with-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.btn-label {
+  font-size: 13px;
+  color: #333;
+  margin-top: 2px;
+  font-weight: 500;
 }
 </style> 

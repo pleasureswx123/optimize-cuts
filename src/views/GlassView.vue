@@ -135,7 +135,7 @@
                 </button>
 
                 <!-- 切割损耗 -->
-                <div class="mb-3">
+                <!-- <div class="mb-3">
                   <label class="form-label">切割损耗</label>
                   <div class="input-group">
                     <input type="number" class="form-control" v-model="cuttingLoss" placeholder="切割损耗(mm)" min="0"
@@ -143,7 +143,7 @@
                     <span class="input-group-text">mm</span>
                   </div>
                   <div class="form-text">设置每次切割的损耗宽度，默认为0mm</div>
-                </div>
+                </div> -->
               </form>
             </div>
           </div>
@@ -491,98 +491,125 @@ const removeCutItem = (index) => {
 }
 
 const calculateOptimization = () => {
+  console.log('%c=== 开始优化计算 ===', 'color: #2196F3; font-weight: bold');
+  console.log('输入参数:');
+  console.log('原料清单:', JSON.stringify(stockList.value, null, 2));
+  console.log('切割清单:', JSON.stringify(cutList.value, null, 2));
+  console.log('切割损耗:', cuttingLoss.value, 'mm');
+
   // 验证原料清单
   if (stockList.value.length === 0) {
-    ElMessage.error('请添加至少一个原料规格')
-    return
+    console.error('错误: 请添加至少一个原料规格');
+    ElMessage.error('请添加至少一个原料规格');
+    return;
   }
 
   // 验证原料规格的宽度、高度和价格
-  const invalidStock = stockList.value.some(stock => stock.width <= 0 || stock.height <= 0 || stock.price <= 0)
+  const invalidStock = stockList.value.some(stock => stock.width <= 0 || stock.height <= 0 || stock.price <= 0);
   if (invalidStock) {
-    ElMessage.error('原料的宽度、高度和价格必须大于0')
-    return
+    console.error('错误: 原料的宽度、高度和价格必须大于0');
+    ElMessage.error('原料的宽度、高度和价格必须大于0');
+    return;
   }
 
   // 验证切割清单
   if (cutList.value.length === 0) {
-    ElMessage.error('请添加至少一个切割项')
-    return
+    console.error('错误: 请添加至少一个切割项');
+    ElMessage.error('请添加至少一个切割项');
+    return;
   }
 
   // 验证切割项的宽度、高度和数量
-  const invalidCut = cutList.value.some(cut => cut.width <= 0 || cut.height <= 0 || cut.quantity <= 0)
+  const invalidCut = cutList.value.some(cut => cut.width <= 0 || cut.height <= 0 || cut.quantity <= 0);
   if (invalidCut) {
-    ElMessage.error('切割项的宽度、高度和数量必须大于0')
-    return
+    console.error('错误: 切割项的宽度、高度和数量必须大于0');
+    ElMessage.error('切割项的宽度、高度和数量必须大于0');
+    return;
   }
 
   // 验证切割项尺寸不能大于最大原料尺寸
-  const maxStockWidth = Math.max(...stockList.value.map(stock => stock.width))
-  const maxStockHeight = Math.max(...stockList.value.map(stock => stock.height))
+  const maxStockWidth = Math.max(...stockList.value.map(stock => stock.width));
+  const maxStockHeight = Math.max(...stockList.value.map(stock => stock.height));
   
   const invalidSize = cutList.value.some(cut => {
     // 如果允许旋转，检查两种方向都不能放下
     if (cut.canRotate) {
       return (cut.width > maxStockWidth && cut.width > maxStockHeight) || 
-             (cut.height > maxStockWidth && cut.height > maxStockHeight)
+             (cut.height > maxStockWidth && cut.height > maxStockHeight);
     }
     // 如果不允许旋转，直接检查当前方向
-    return cut.width > maxStockWidth || cut.height > maxStockHeight
-  })
+    return cut.width > maxStockWidth || cut.height > maxStockHeight;
+  });
   
   if (invalidSize) {
-    ElMessage.error('切割项尺寸不能大于原料尺寸')
-    return
+    console.error('错误: 切割项尺寸不能大于原料尺寸');
+    ElMessage.error('切割项尺寸不能大于原料尺寸');
+    return;
   }
 
   // 验证切割损耗
   if (cuttingLoss.value < 0) {
-    ElMessage.error('切割损耗不能小于0')
-    return
+    console.error('错误: 切割损耗不能小于0');
+    ElMessage.error('切割损耗不能小于0');
+    return;
   }
+
+  console.log('数据验证通过，开始计算优化方案...');
+  console.time('优化计算耗时');
 
   const config = {
     optimizationStrategy: optimizationStrategy.value,
     layoutStrategy: layoutStrategy.value,
     firstCutDirection: firstCutDirection.value,
     cuttingLoss: cuttingLoss.value
-  }
+  };
   
-  const result = optimizeCuts(stockList.value, cutList.value, config)
-  console.log('优化结果：', result)
+  const result = optimizeCuts(stockList.value, cutList.value, config);
+  console.timeEnd('优化计算耗时');
+  console.log('%c优化结果：', 'color: #4CAF50; font-weight: bold', result);
 
   if (result && result.plans.length > 0) {
-    cuttingPlan.value = result.plans
-    utilization.value = result.totalUtilization
-    totalSheets.value = result.sheetsCount
-    wasteArea.value = result.totalWasteArea
-    totalCost.value = result.totalCost
+    cuttingPlan.value = result.plans;
+    utilization.value = result.totalUtilization;
+    totalSheets.value = result.sheetsCount;
+    wasteArea.value = result.totalWasteArea;
+    totalCost.value = result.totalCost;
     
     // 更新材料使用统计
-    const usageMap = new Map()
+    const usageMap = new Map();
     result.plans.forEach(plan => {
-      const spec = `${plan.stock.width}×${plan.stock.height}`
+      const spec = `${plan.stock.width}×${plan.stock.height}`;
       if (!usageMap.has(spec)) {
         usageMap.set(spec, {
           spec,
           price: plan.stock.price,
           quantity: 1,
           total: plan.stock.price
-        })
+        });
       } else {
-        const stat = usageMap.get(spec)
-        stat.quantity++
-        stat.total = stat.quantity * stat.price
+        const stat = usageMap.get(spec);
+        stat.quantity++;
+        stat.total = stat.quantity * stat.price;
       }
-    })
+    });
     
-    materialUsageStats.value = Array.from(usageMap.values())
+    materialUsageStats.value = Array.from(usageMap.values());
+
+    console.log('%c=== 优化结果统计 ===', 'color: #9C27B0; font-weight: bold');
+    console.log('总原料数:', totalSheets.value, '块');
+    console.log('材料利用率:', utilization.value.toFixed(2), '%');
+    console.log('总废料面积:', (wasteArea.value/1000000).toFixed(2), 'm²');
+    console.log('总成本:', totalCost.value.toFixed(2), '元');
+    console.log('材料使用统计:', materialUsageStats.value);
 
     // 更新可视化
     nextTick(() => {
-      updateVisualization(result.plans)
-    })
+      updateVisualization(result.plans);
+      console.log('可视化更新完成');
+    });
+  } else {
+    console.error('错误: 无法生成切割方案');
+    ElMessage.error('无法生成切割方案，请检查输入数据');
   }
 }
 

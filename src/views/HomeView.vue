@@ -89,6 +89,32 @@
         </div>
       </section>
 
+      <!-- 创始人问答区域 -->
+      <section class="founder-qa-section py-5">
+        <div class="container">
+          <h2 class="text-center mb-5">创始人有话说</h2>
+          <div class="qa-container">
+            <div class="qa-item" v-for="(qa, index) in qaList" :key="index">
+              <div class="question">
+                <div class="q-icon">Q</div>
+                <div class="q-content">{{ qa.question }}</div>
+              </div>
+              <div class="answer">
+                <div class="a-icon">A</div>
+                <div class="a-content">{{ qa.answer }}</div>
+              </div>
+            </div>
+          </div>
+          <div class="slogan-container text-center mt-5">
+            <h3 class="mb-3">「算准每一毫米，守住每一分利」</h3>
+            <p class="slogan-subtitle">——为门窗人而生的智能助手，正在和你一样扎根生长。</p>
+            <button class="btn btn-lg btn-orange mt-4" @click="startFreeTrial">
+              免费试用基础版 <i class="fas fa-arrow-right ms-2"></i>
+            </button>
+          </div>
+        </div>
+      </section>
+
       <!-- 优势展示区域 -->
       <section class="benefits-section">
         <div class="container">
@@ -163,12 +189,45 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const loading = ref(true)
 const demoVideo = ref(null)
 const videoContainer = ref(null)
 const isPlaying = ref(false)
 const isControlsVisible = ref(false)
+
+// 问答数据
+const qaList = ref([
+  {
+    question: "为什么选择做建材门窗行业的数字化系统？听起来很传统啊……",
+    answer: "正因为传统，才更需要改变。我姐夫做了十几年塑钢门窗厂，每次看他手写算料、人工排单，错一厘米可能浪费半面墙的玻璃。国家提倡产业智能化，但小工厂连基础的数据工具都没有——我想用代码替他们'省材料、省时间、省焦虑'。"
+  },
+  {
+    question: "你们软件现在能解决什么具体问题？",
+    answer: "从最痛的'下料计算'切入。比如您要切割100根钢筋，系统会按长度智能排列，让废料最少；如果是玻璃或木板这类面积切割，算法会更复杂——我们区分了'按根'和'按块'两种模式，误差率比老师傅手算还低5%。接下来会逐步上线库存预警、手机画图下单功能，让中小厂也能像大企业一样'用数据赚钱'。"
+  },
+  {
+    question: "大厂也在做类似系统，你们优势在哪？",
+    answer: "我们不卖'万能模板'，只做'听得懂方言的软件'。这半年我跑了23家乡镇工厂，发现老板们怕的不是花钱，是怕系统太复杂、用不起来。所以我们的操作界面像'计算器'一样简单，甚至能对接他们用了十几年的Excel表格——先帮人跑起来，再带人跑得更远。"
+  },
+  {
+    question: "听说您是技术出身？怎么会懂制造业的痛点？",
+    answer: "（笑）其实是我姐夫的吐槽点醒了我。有次他凌晨三点打电话，因为切割师傅算错尺寸，整个订单要重做。我当时就想：明明有更精准的算法，为什么还在用纸笔计算？后来我带着笔记本住进车间，看着工人怎么量、怎么切、怎么骂供应商…这些细节，才是打磨产品的'秘密图纸'。"
+  },
+  {
+    question: "对未来有什么期待？",
+    answer: "希望五年后，每个县城建材店的老板打开手机就能用我们的系统——查看库存、设计门窗、一键报价。让坚持了半辈子的中小厂，不会被数字化浪潮抛下，而是用自己的经验加上我们的工具，长出新的翅膀。"
+  }
+])
+
+// 免费试用功能
+const startFreeTrial = () => {
+  // 实现免费试用逻辑
+  router.push('/auth/register')
+}
 
 // 视频播放控制
 const togglePlay = () => {
@@ -710,5 +769,105 @@ onUnmounted(() => {
   .play-pause-btn i {
     font-size: 20px;
   }
+}
+
+.founder-qa-section {
+  background-color: #f8f9fa;
+  padding: 4rem 0;
+}
+
+.qa-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.qa-item {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: transform 0.3s ease;
+}
+
+.qa-item:hover {
+  transform: translateY(-5px);
+}
+
+.question, .answer {
+  display: flex;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.answer {
+  margin-top: 1.5rem;
+}
+
+.q-icon, .a-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.q-icon {
+  background-color: #e9ecef;
+  color: #495057;
+}
+
+.a-icon {
+  background-color: #ff6b35;
+  color: white;
+}
+
+.q-content {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #343a40;
+}
+
+.a-content {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #495057;
+}
+
+.slogan-container {
+  margin-top: 4rem;
+  padding: 2rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.slogan-container h3 {
+  font-size: 1.8rem;
+  color: #ff6b35;
+  font-weight: bold;
+}
+
+.slogan-subtitle {
+  color: #6c757d;
+  font-size: 1.1rem;
+}
+
+.btn-orange {
+  background-color: #ff6b35;
+  color: white;
+  border: none;
+  padding: 0.8rem 2rem;
+  font-size: 1.1rem;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.btn-orange:hover {
+  background-color: #ff5a1f;
+  transform: translateY(-2px);
 }
 </style> 

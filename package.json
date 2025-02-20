@@ -20,6 +20,8 @@
   "license": "ISC",
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.2",
+    "@tweenjs/tween.js": "^25.0.0",
+    "ar.js": "^2.2.2",
     "bootstrap": "^5.3.3",
     "d3": "^7.9.0",
     "element-plus": "^2.9.4",
@@ -27,6 +29,8 @@
     "html2canvas": "^1.4.1",
     "html2pdf.js": "^0.10.2",
     "pinia": "^2.3.1",
+    "stats.js": "^0.17.0",
+    "three": "^0.173.0",
     "vue": "^3.5.13",
     "vue-router": "^4.5.0"
   },

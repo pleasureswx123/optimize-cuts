@@ -353,17 +353,35 @@
           <!-- 切割方案可视化 -->
           <div class="card mb-4">
             <div class="card-body">
-              <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="card-title mb-0">切割方案可视化</h3>
-                <div class="global-legend d-flex align-items-center gap-3" v-if="cuttingPlan.length">
-                  <div v-for="(item, index) in globalLegendItems" :key="index"
-                    class="legend-item d-flex align-items-center">
-                    <div class="color-block" :style="{ backgroundColor: item.color }"></div>
-                    <span class="legend-text">{{ item.size }}</span>
+              <h3 class="card-title mb-4">切割方案可视化</h3>
+              <div class="visualization-tabs">
+                <ul class="nav nav-tabs" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#2d-view" type="button" role="tab">
+                      <i class="fas fa-chart-bar me-2"></i>2D视图
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#ar-view" type="button" role="tab">
+                      <i class="fas fa-cube me-2"></i>AR/3D视图
+                    </button>
+                  </li>
+                </ul>
+                <div class="tab-content mt-3">
+                  <div class="tab-pane fade show active" id="2d-view" role="tabpanel">
+                    <div class="cutting-visualization" ref="visualizationContainer"></div>
+                  </div>
+                  <div class="tab-pane fade" id="ar-view" role="tabpanel">
+                    <ARViewer
+                      :cutting-plan="cuttingPlan"
+                      :stock-list="stockList"
+                      :cut-list="cutList"
+                      :saw-kerf="sawKerf"
+                      view-type="glass"
+                    />
                   </div>
                 </div>
               </div>
-              <div class="cutting-visualization" ref="visualizationContainer"></div>
             </div>
           </div>
         </div>
@@ -379,12 +397,14 @@ import ExcelJS from 'exceljs'
 // 引入优化算法
 import optimizeCuts from '../utils/CuttingOptimizer';
 import { ElMessage } from 'element-plus';
+import ARViewer from '../components/ARViewer.vue'
 
 // 状态定义
 const stockList = ref([
   { width: 2440, height: 1220, price: 1000 }  // 默认一个原料材料尺寸
 ])
 const cutList = ref([{ width: 600, height: 500, quantity: 5, canRotate: true },{ width: 700, height: 400, quantity: 4, canRotate: true }]) // 默认一个切割项
+const sawKerf = ref(4)  // 切割损耗默认为4mm
 
 // 添加必要的响应式变量
 const cuttingPlan = ref([])
@@ -495,7 +515,7 @@ const calculateOptimization = () => {
   console.log('输入参数:');
   console.log('原料清单:', JSON.stringify(stockList.value, null, 2));
   console.log('切割清单:', JSON.stringify(cutList.value, null, 2));
-  console.log('切割损耗:', cuttingLoss.value, 'mm');
+  console.log('切割损耗:', sawKerf.value, 'mm');
 
   // 验证原料清单
   if (stockList.value.length === 0) {
@@ -548,7 +568,7 @@ const calculateOptimization = () => {
   }
 
   // 验证切割损耗
-  if (cuttingLoss.value < 0) {
+  if (sawKerf.value < 0) {
     console.error('错误: 切割损耗不能小于0');
     ElMessage.error('切割损耗不能小于0');
     return;
@@ -561,7 +581,7 @@ const calculateOptimization = () => {
     optimizationStrategy: optimizationStrategy.value,
     layoutStrategy: layoutStrategy.value,
     firstCutDirection: firstCutDirection.value,
-    cuttingLoss: cuttingLoss.value
+    sawKerf: sawKerf.value  // 添加切割损耗参数
   };
   
   const result = optimizeCuts(stockList.value, cutList.value, config);
@@ -2728,5 +2748,37 @@ const scrollToCalculator = () => {
   color: #333;
   margin-top: 2px;
   font-weight: 500;
+}
+
+.visualization-tabs {
+  width: 100%;
+}
+
+.nav-tabs {
+  border-bottom: 2px solid #e9ecef;
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  color: #666;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+  color: #2196F3;
+  border: none;
+}
+
+.nav-tabs .nav-link.active {
+  color: #2196F3;
+  border: none;
+  border-bottom: 2px solid #2196F3;
+  background: transparent;
+}
+
+.tab-content {
+  padding: 1rem 0;
 }
 </style> 

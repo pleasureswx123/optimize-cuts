@@ -301,7 +301,33 @@
           <div class="card mb-4">
             <div class="card-body">
               <h3 class="card-title mb-4">切割方案可视化</h3>
-              <div class="cutting-visualization" ref="visualizationContainer"></div>
+              <div class="visualization-tabs">
+                <ul class="nav nav-tabs" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#2d-view" type="button" role="tab">
+                      <i class="fas fa-chart-bar me-2"></i>2D视图
+                    </button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#ar-view" type="button" role="tab">
+                      <i class="fas fa-cube me-2"></i>AR/3D视图
+                    </button>
+                  </li>
+                </ul>
+                <div class="tab-content mt-3">
+                  <div class="tab-pane fade show active" id="2d-view" role="tabpanel">
+                    <div class="cutting-visualization" ref="visualizationContainer"></div>
+                  </div>
+                  <div class="tab-pane fade" id="ar-view" role="tabpanel">
+                    <ARViewer
+                      :cutting-plan="cuttingPlan"
+                      :stock-list="stockList"
+                      :cut-list="cutList"
+                      :saw-kerf="sawKerf"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -316,6 +342,7 @@ import { ref, onMounted, computed } from 'vue'
 import * as d3 from 'd3'
 import ExcelJS from 'exceljs'
 import { ElMessage } from 'element-plus'
+import ARViewer from '../components/ARViewer.vue'
 
 // 状态定义
 const stockList = ref([
@@ -1551,5 +1578,37 @@ onMounted(() => {
   color: #333;
   margin-top: 2px;
   font-weight: 500;
+}
+
+.visualization-tabs {
+  width: 100%;
+}
+
+.nav-tabs {
+  border-bottom: 2px solid #e9ecef;
+}
+
+.nav-tabs .nav-link {
+  border: none;
+  color: #666;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.nav-tabs .nav-link:hover {
+  color: #2196F3;
+  border: none;
+}
+
+.nav-tabs .nav-link.active {
+  color: #2196F3;
+  border: none;
+  border-bottom: 2px solid #2196F3;
+  background: transparent;
+}
+
+.tab-content {
+  padding: 1rem 0;
 }
 </style> 

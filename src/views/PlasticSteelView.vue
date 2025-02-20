@@ -144,7 +144,7 @@
                 <h3 class="card-title mb-0">数据导入导出</h3>
                 <a href="#" class="text-primary text-decoration-none" @click.prevent="downloadTemplate" title="下载Excel模板">
                   <i class="fas fa-file-download"></i>
-                  <small class="ms-1">下载模板</small>
+                  <small class="ms-1">下载Excel模板</small>
                 </a>
               </div>
               <div class="d-flex justify-content-between">
@@ -1119,12 +1119,6 @@ const exportToExcel = async () => {
         9 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH,
         12 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH + CUTTING_PLAN_LENGTH
       ];
-      const HEADER_ROWS = [
-        4,
-        7 + STOCK_LIST_LENGTH,
-        10 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH,
-        13 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH + CUTTING_PLAN_LENGTH
-      ];
       // 特殊样式
       if (rowNumber === TITLE_ROW) {
         // 主标题
@@ -1142,7 +1136,7 @@ const exportToExcel = async () => {
           pattern: 'solid',
           fgColor: { argb: 'FFE2F0D9' }
         };
-      } else if (HEADER_ROWS.includes(rowNumber)) {
+      } else if (SUBTITLE_ROWS.includes(rowNumber - 1)) {
         // 表头
         cell.font = { name: '微软雅黑', size: 11, bold: true };
         cell.fill = {

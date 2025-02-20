@@ -151,17 +151,32 @@
           <!-- 导入导出 -->
           <div class="card mb-4">
             <div class="card-body">
-              <h3 class="card-title mb-4">数据导入导出</h3>
-              <div class="d-grid gap-2">
-                <button class="btn btn-success" @click="importFromExcel">
-                  <i class="fas fa-file-excel me-2"></i>从Excel导入
-                </button>
-                <button class="btn btn-success" @click="exportToExcel">
-                  <i class="fas fa-download me-2"></i>导出到Excel
-                </button>
-                <button class="btn btn-success" @click="exportToImage">
-                  <i class="fas fa-image me-2"></i>导出到图片
-                </button>
+              <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="card-title mb-0">数据导入导出</h3>
+                <a href="#" class="text-primary text-decoration-none" @click.prevent="downloadTemplate" title="下载Excel模板">
+                  <i class="fas fa-file-download"></i>
+                  <small class="ms-1">下载Excel模板</small>
+                </a>
+              </div>
+              <div class="d-flex justify-content-between">
+                <div class="btn-icon-with-label">
+                  <button class="btn btn-icon" @click="importFromExcel" title="从Excel导入">
+                    <i class="fas fa-file-import text-success"></i>
+                  </button>
+                  <span class="btn-label">从Excel导入</span>
+                </div>
+                <div class="btn-icon-with-label">
+                  <button class="btn btn-icon" @click="exportToExcel" title="导出到Excel">
+                    <i class="fas fa-file-export text-success"></i>
+                  </button>
+                  <span class="btn-label">导出到Excel</span>
+                </div>
+                <div class="btn-icon-with-label">
+                  <button class="btn btn-icon" @click="exportToImage" title="导出到图片">
+                    <i class="fas fa-images text-success"></i>
+                  </button>
+                  <span class="btn-label">导出到图片</span>
+                </div>
               </div>
             </div>
           </div>
@@ -360,7 +375,7 @@
 <script setup>
 import { ref, onMounted, computed, nextTick } from 'vue'
 import * as d3 from 'd3'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
 // 引入优化算法
 import optimizeCuts from '../utils/CuttingOptimizer';
 import { ElMessage } from 'element-plus';
@@ -710,12 +725,261 @@ onMounted(() => {
 })
 
 // 导入导出功能
-const importFromExcel = () => {
-  // TODO: 实现Excel导入功能
+const downloadTemplate = async () => {
+  // 创建工作簿
+  const workbook = new ExcelJS.Workbook();
+  
+  // 创建原料清单工作表
+  const stockSheet = workbook.addWorksheet('原料清单');
+  stockSheet.columns = [
+    { header: '序号', width: 10 },
+    { header: '宽度(mm)', width: 15 },
+    { header: '高度(mm)', width: 15 },
+    { header: '单价(元)', width: 15 }
+  ];
+  
+  // 添加示例数据
+  stockSheet.addRow([1, 2440, 1220, 1000]);
+  
+  // 创建切割清单工作表
+  const cutSheet = workbook.addWorksheet('切割清单');
+  cutSheet.columns = [
+    { header: '序号', width: 10 },
+    { header: '宽度(mm)', width: 15 },
+    { header: '高度(mm)', width: 15 },
+    { header: '数量(件)', width: 15 }
+  ];
+  
+  // 添加示例数据
+  cutSheet.addRows([
+    [1, 800, 600, 3],
+    [2, 500, 400, 2],
+    [3, 350, 300, 4]
+  ]);
+  
+  // 设置表头样式
+  [stockSheet, cutSheet].forEach(sheet => {
+    sheet.getRow(1).font = { name: '微软雅黑', size: 11, bold: true };
+    sheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFDDEBF7' }
+    };
+    
+    // 添加说明行
+    sheet.insertRow(1, ['请按照以下格式填写数据']);
+    sheet.getRow(1).font = { name: '微软雅黑', size: 12, bold: true, color: { argb: 'FF0000FF' } };
+    sheet.mergeCells('A1:D1');
+    sheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+  });
+
+  // 导出文件
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = '板材下料优化方案模板.xlsx';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
-const exportToExcel = () => {
-  // TODO: 实现Excel导出功能
+const importFromExcel = () => {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.xlsx,.xls';
+  
+  input.onchange = async (e) => {
+    try {
+      const file = e.target.files[0];
+      const buffer = await file.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(buffer);
+      
+      // 读取原料清单
+      const stockSheet = workbook.getWorksheet('原料清单');
+      if (stockSheet) {
+        const stockData = [];
+        stockSheet.eachRow((row, rowNumber) => {
+          // 跳过前两行（说明行和表头）
+          if (rowNumber > 2) {
+            const [_, sn, width, height, price] = row.values;
+            if (width && height && price) {
+              stockData.push({
+                width: Number(width),
+                height: Number(height),
+                price: Number(price)
+              });
+            }
+          }
+        });
+        if (stockData.length > 0) {
+          stockList.value = stockData;
+        }
+      }
+      
+      // 读取切割清单
+      const cutSheet = workbook.getWorksheet('切割清单');
+      if (cutSheet) {
+        const cutData = [];
+        cutSheet.eachRow((row, rowNumber) => {
+          // 跳过前两行（说明行和表头）
+          if (rowNumber > 2) {
+            const [_, sn, width, height, quantity] = row.values;
+            if (width && height && quantity) {
+              cutData.push({
+                width: Number(width),
+                height: Number(height),
+                quantity: Number(quantity),
+                canRotate: true
+              });
+            }
+          }
+        });
+        if (cutData.length > 0) {
+          cutList.value = cutData;
+        }
+      }
+      
+      ElMessage.success('数据导入成功');
+      // 导入后自动计算优化方案
+      calculateOptimization();
+      
+    } catch (error) {
+      console.error('导入Excel文件时出错:', error);
+      ElMessage.error('导入失败，请确保文件格式正确');
+    }
+  };
+  
+  input.click();
+}
+
+const exportToExcel = async () => {
+  // 创建工作簿
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('切割优化方案');
+
+  // 设置列宽
+  worksheet.columns = [
+    { width: 15 },  // A列
+    { width: 15 },  // B列
+    { width: 80 },  // C列
+    { width: 15 }  // D列
+  ];
+
+  // 准备数据
+  const data = [
+    ['板材下料优化方案'],
+    [],  // 空行
+    ['原料尺寸清单'],
+    ['序号', '宽度(mm)', '高度(mm)', '单价(元)'],
+    ...stockList.value.map((stock, index) => [
+      index + 1, 
+      stock.width,
+      stock.height,
+      stock.price
+    ]),
+    [],  // 空行
+    ['下料尺寸清单'],
+    ['序号', '宽度(mm)', '高度(mm)', '数量(件)'],
+    ...cutList.value.map((cut, index) => [
+      index + 1, 
+      cut.width,
+      cut.height,
+      cut.quantity
+    ]),
+    [],  // 空行
+    ['切割优化方案'],
+    ['原料编号', '原料规格', '切割明细', '利用率(%)'],
+    ...cuttingPlan.value.map((plan, index) => [
+      index + 1,
+      `${plan.stock.width}×${plan.stock.height}`,
+      plan.placements.map(p => `${p.width}×${p.height}mm`).join('，'),
+      `${plan.utilization.toFixed(2)}%`
+    ]),
+    [],  // 空行
+    ['总计数据'],
+    ['总原料数(块)', '材料利用率(%)', '总废料面积(m²)', '总成本(元)'],
+    [
+      totalSheets.value,
+      `${utilization.value.toFixed(2)}%`,
+      (wasteArea.value/1000000).toFixed(2),
+      totalCost.value.toFixed(2)
+    ]
+  ];
+
+  // 添加数据到工作表
+  worksheet.addRows(data);
+
+  // 设置合并单元格
+  worksheet.mergeCells('A1:D1');  // 主标题
+
+  // 应用样式
+  worksheet.eachRow((row, rowNumber) => {
+    // 设置行高
+    row.height = 25;
+
+    row.eachCell((cell) => {
+      // 基础样式
+      cell.font = { name: '微软雅黑', size: 11 };
+      cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+      cell.border = {
+        top: { style: 'thin' },
+        bottom: { style: 'thin' },
+        left: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+
+      // 定义行号常量
+      const TITLE_ROW = 1;
+      const STOCK_LIST_LENGTH = stockList.value.length;
+      const CUT_LIST_LENGTH = cutList.value.length;
+      const CUTTING_PLAN_LENGTH = cuttingPlan.value.length;
+
+      const SUBTITLE_ROWS = [
+        3,
+        6 + STOCK_LIST_LENGTH,
+        9 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH,
+        12 + STOCK_LIST_LENGTH + CUT_LIST_LENGTH + CUTTING_PLAN_LENGTH
+      ];
+
+      // 特殊样式
+      if (rowNumber === TITLE_ROW) {
+        // 主标题
+        cell.font = { name: '微软雅黑', size: 16, bold: true };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF9BC2E6' }
+        };
+      } else if (SUBTITLE_ROWS.includes(rowNumber)) {
+        // 子标题
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFE2F0D9' }
+        };
+      } else if (SUBTITLE_ROWS.includes(rowNumber - 1)) {
+        // 表头
+        cell.font = { name: '微软雅黑', size: 11, bold: true };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFDDEBF7' }
+        };
+      }
+    });
+  });
+
+  // 导出文件
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = '板材下料优化方案.xlsx';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 // 在script部分添加导出图片方法
@@ -732,7 +996,7 @@ const exportToImage = () => {
 
     // 创建一个SVG的克隆，以便修改而不影响原始SVG
     const clonedSvg = svg.cloneNode(true);
-    
+  
     // 设置白色背景
     const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     rect.setAttribute('width', '100%');
@@ -2397,5 +2661,45 @@ const scrollToCalculator = () => {
   .materials-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* 按钮图标样式 */
+.btn-icon {
+  width: 56px;
+  height: 56px;
+  padding: 0;
+  border-radius: 50%;
+  background: #2ecc71 !important;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-icon:hover {
+  background: #27ae60 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(40, 167, 69, 0.2);
+}
+
+.btn-icon i {
+  font-size: 1.8rem;
+}
+
+.text-success {
+  color: #fff !important;
+}
+
+.btn-icon-with-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.btn-label {
+  font-size: 13px;
+  color: #333;
+  margin-top: 2px;
+  font-weight: 500;
 }
 </style> 

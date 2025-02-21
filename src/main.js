@@ -6,6 +6,7 @@ import router from './router'
 // 导入 Element Plus
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
+import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 // 导入 Bootstrap 和 Font Awesome
 import 'bootstrap/dist/css/bootstrap.min.css'
@@ -28,6 +29,11 @@ const app = createApp(App)
 app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
+
+// 注册所有图标
+for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+  app.component(key, component)
+}
 
 // 添加错误处理
 app.config.errorHandler = (err, vm, info) => {

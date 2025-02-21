@@ -25,6 +25,10 @@
               <i class="fas fa-clone"></i>
               <span>板材切割优化</span>
             </router-link>
+            <router-link to="/window-door-design" class="nav-link" active-class="active">
+              <i class="fas fa-drafting-compass"></i>
+              <span>门窗设计</span>
+            </router-link>
             <router-link to="/contact" class="nav-link" active-class="active">
               <i class="fas fa-phone"></i>
               <span>联系我们</span>
@@ -85,6 +89,7 @@
               <li><router-link to="/">首页</router-link></li>
               <li><router-link to="/plastic-steel">型材切割优化</router-link></li>
               <li><router-link to="/glass">板材切割优化</router-link></li>
+              <li><router-link to="/window-door-design">门窗设计</router-link></li>
               <li><router-link to="/contact">联系我们</router-link></li>
             </ul>
           </div>

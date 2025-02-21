@@ -22,6 +22,11 @@ const router = createRouter({
       path: '/contact',
       name: 'contact',
       component: () => import('../views/ContactView.vue')
+    },
+    {
+      path: '/window-door-design',
+      name: 'window-door-design',
+      component: () => import('../views/WindowDoorDesign/index.vue')
     }
   ],
   scrollBehavior(to, from, savedPosition) {

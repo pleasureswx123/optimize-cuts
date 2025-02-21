@@ -362,8 +362,8 @@
                     </button>
                   </li>
                   <li class="nav-item" role="presentation">
-                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#ar-view" type="button" role="tab">
-                      <i class="fas fa-cube me-2"></i>AR/3D视图
+                    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#3d-view" type="button" role="tab">
+                      <i class="fas fa-cube me-2"></i>3D视图
                     </button>
                   </li>
                 </ul>
@@ -371,7 +371,7 @@
                   <div class="tab-pane fade show active" id="2d-view" role="tabpanel">
                     <div class="cutting-visualization" ref="visualizationContainer"></div>
                   </div>
-                  <div class="tab-pane fade" id="ar-view" role="tabpanel">
+                  <div class="tab-pane fade" id="3d-view" role="tabpanel">
                     <ARViewer
                       :cutting-plan="cuttingPlan"
                       :stock-list="stockList"

@@ -1,15 +1,15 @@
 <template>
   <div class="ar-viewer">
     <div ref="container" class="ar-container"></div>
-    <div class="ar-controls" v-if="!isInAR">
+    <!-- <div class="ar-controls" v-if="!isInAR">
       <button class="btn btn-primary" @click="startAR">
         <i class="fas fa-vr-cardboard me-2"></i>启动AR视图
       </button>
       <button class="btn btn-secondary ms-2" @click="toggle3DView">
         <i class="fas fa-cube me-2"></i>切换3D视图
       </button>
-    </div>
-    <div class="ar-stats" v-if="showStats">
+    </div> -->
+    <!-- <div class="ar-stats" v-if="showStats">
       <div class="stat-item">
         <span class="stat-label">切割进度:</span>
         <div class="progress">
@@ -26,7 +26,7 @@
         <span class="stat-label">剩余长度:</span>
         <span class="stat-value">{{ remainingLength }}mm</span>
       </div>
-    </div>
+    </div> -->
   </div>
 </template>
 

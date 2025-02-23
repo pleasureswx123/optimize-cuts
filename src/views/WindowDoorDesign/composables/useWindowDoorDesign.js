@@ -78,7 +78,7 @@ export function useWindowDoorDesign(canvasRef) {
     });
 
     canvas.on('mouse:move', (e) => {
-      if (isDrawing && activeShape) {
+      if (isDrawing && activeShape && activeToolId === 'outer-frame') {
         const pointer = canvas.getPointer(e.e);
         const width = Math.round((pointer.x - startPoint.x) / GRID_SETTINGS.DEFAULT_SIZE) * GRID_SETTINGS.DEFAULT_SIZE;
         const height = Math.round((pointer.y - startPoint.y) / GRID_SETTINGS.DEFAULT_SIZE) * GRID_SETTINGS.DEFAULT_SIZE;
@@ -95,7 +95,7 @@ export function useWindowDoorDesign(canvasRef) {
     });
 
     canvas.on('mouse:up', () => {
-      if (isDrawing && activeShape) {
+      if (isDrawing && activeShape && activeToolId === 'outer-frame') {
         isDrawing = false;
         
         // 如果尺寸太小，删除图形
@@ -114,8 +114,16 @@ export function useWindowDoorDesign(canvasRef) {
     });
 
     canvas.on('object:moving', (e) => {
+      console.log('object:moving', e);
       if (!e.target) return;
-      
+      if (e.target.type === 'i-text') {
+        e.target.set({
+          left: Math.round(e.target.left / GRID_SETTINGS.DEFAULT_SIZE) * GRID_SETTINGS.DEFAULT_SIZE,
+          top: Math.round(e.target.top / GRID_SETTINGS.DEFAULT_SIZE) * GRID_SETTINGS.DEFAULT_SIZE
+        });
+        canvas.renderAll();
+      }
+
       const obj = e.target;
       const grid = GRID_SETTINGS.DEFAULT_SIZE;
       const threshold = GRID_SETTINGS.SNAP_THRESHOLD;
@@ -127,92 +135,6 @@ export function useWindowDoorDesign(canvasRef) {
       
       canvas.renderAll();
     });
-  };
-  
-  // 添加形状
-  const addShape = (type, options = {}) => {
-    if (!canvasRef.value) return;
-    
-    const defaultOptions = {
-      ...SHAPE_DEFAULTS,
-      ...options
-    };
-    
-    let shape;
-    
-    switch (type) {
-      case 'outer-frame':
-        shape = createFrame('outer', defaultOptions);
-        break;
-      case 'vertical-column':
-        shape = createColumn('vertical', defaultOptions);
-        break;
-      case 'horizontal-column':
-        shape = createColumn('horizontal', defaultOptions);
-        break;
-      case 'window-sash':
-        shape = createWindowSash(defaultOptions);
-        break;
-      case 'door-sash':
-        shape = createDoorSash(defaultOptions);
-        break;
-      // ... 其他形状类型
-    }
-    
-    if (shape) {
-      canvasRef.value.add(shape);
-      canvasRef.value.setActiveObject(shape);
-      canvasRef.value.renderAll();
-      
-      // 添加尺寸标注
-      addDimensions(shape);
-    }
-  };
-  
-  // 创建框架
-  const createFrame = (type, options) => {
-    const frame = new Rect({
-      ...options,
-      width: type === 'outer' ? 2000 : 1800,
-      height: type === 'outer' ? 2000 : 1800
-    });
-    
-    return frame;
-  };
-  
-  // 创建柱子
-  const createColumn = (orientation, options) => {
-    const defaults = {
-      width: orientation === 'vertical' ? 50 : 1000,
-      height: orientation === 'vertical' ? 1000 : 50
-    };
-    
-    return new Rect({
-      ...defaults,
-      ...options
-    });
-  };
-  
-  // 创建窗扇
-  const createWindowSash = (options) => {
-    const sash = new Rect({
-      width: 500,
-      height: 1000,
-      ...options
-    });
-    
-    return sash;
-  };
-  
-  // 创建门扇
-  const createDoorSash = (options) => {
-    const sash = new Rect({
-      width: 800,
-      height: 2000,
-      ...options
-    });
-    
-    return sash;
   };
   
   // 添加尺寸标注
@@ -357,28 +279,11 @@ export function useWindowDoorDesign(canvasRef) {
     return json;
   };
   
-  // 加载模板
-  const loadTemplate = async (templateId) => {
-    if (!canvasRef.value) return;
-    
-    // 这里可以添加从服务器加载模板的逻辑
-    console.log('Loading template:', templateId);
-    
-    // 示例：加载一个基本模板
-    clearCanvas();
-    addShape('outer-frame', {
-      left: 100,
-      top: 100
-    });
-  };
-  
   return {
     initCanvas,
-    addShape,
     deleteSelected,
     clearCanvas,
     saveDesign,
-    loadTemplate,
     setActiveTool: (toolId) => {
       activeToolId = toolId;
       if (canvasRef.value) {

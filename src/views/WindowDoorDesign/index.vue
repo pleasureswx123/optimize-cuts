@@ -52,33 +52,7 @@
     <!-- 底部工具栏 -->
     <BottomBar
       @save="handleSave"
-      @settings="openSettings"
-      @template="openTemplate"
     />
-
-    <!-- 设置对话框 -->
-    <el-dialog
-      v-model="settingsVisible"
-      title="画图设置"
-      width="500px"
-    >
-      <SettingsForm 
-        :settings="settings"
-        @update:settings="updateSettings"
-      />
-    </el-dialog>
-
-    <!-- 模板选择对话框 -->
-    <el-dialog
-      v-model="templateVisible"
-      title="选择模板"
-      width="800px"
-    >
-      <TemplateSelector 
-        :templates="templates"
-        @select="applyTemplate"
-      />
-    </el-dialog>
   </div>
 </template>
 
@@ -88,8 +62,6 @@ import { Refresh, RefreshRight, Delete, RemoveFilled } from '@element-plus/icons
 import ToolBar from './components/ToolBar.vue';
 import SidePanel from './components/SidePanel.vue';
 import BottomBar from './components/BottomBar.vue';
-import SettingsForm from './components/SettingsForm.vue';
-import TemplateSelector from './components/TemplateSelector.vue';
 import { useWindowDoorDesign } from './composables/useWindowDoorDesign';
 import { useHistory } from './composables/useHistory';
 import { TOOLS, CATEGORIES } from './constants';
@@ -98,31 +70,13 @@ import { TOOLS, CATEGORIES } from './constants';
 const canvas = ref(null);
 const activeToolId = ref(null);
 const hasSelection = ref(false);
-const settingsVisible = ref(false);
-const templateVisible = ref(false);
-
-// 设置相关
-const settings = ref({
-  gridSize: 50,
-  snapToGrid: true,
-  showDimensions: true,
-});
-
-// 模板数据
-const templates = ref([
-  { id: 1, name: '标准门框 2000x2000', thumbnail: '/templates/door-2000.png' },
-  { id: 2, name: '标准窗框 1500x1500', thumbnail: '/templates/window-1500.png' },
-  // ... 更多模板
-]);
 
 // 使用组合式函数
 const {
   initCanvas,
-  addShape,
   deleteSelected,
   clearCanvas,
   saveDesign,
-  loadTemplate,
   setActiveTool
 } = useWindowDoorDesign(canvas);
 
@@ -179,25 +133,6 @@ const handleSave = async () => {
   } catch (error) {
     ElMessage.error('保存失败');
   }
-};
-
-const openSettings = () => {
-  settingsVisible.value = true;
-};
-
-const updateSettings = (newSettings) => {
-  settings.value = newSettings;
-  // 应用新设置
-};
-
-const openTemplate = () => {
-  templateVisible.value = true;
-};
-
-const applyTemplate = async (template) => {
-  await loadTemplate(template.id);
-  templateVisible.value = false;
-  recordState(canvas.value.toJSON());
 };
 
 // 生命周期钩子
